@@ -14,6 +14,7 @@ FROM python:3.11-slim
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
+    PYTHONPATH=/app/backend \
     SIDEQUEST_WEB_DIR=/app/web \
     SIDEQUEST_DATA_DIR=/app/data
 
