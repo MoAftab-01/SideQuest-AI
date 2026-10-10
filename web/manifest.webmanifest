@@ -1,0 +1,44 @@
+{
+  "name": "SideQuest — touch grass",
+  "short_name": "SideQuest",
+  "description": "An outdoor mission game that gets you off the screen: pick a time budget, get one mission, put the phone away, come back with a photo and let a local open-weight model judge it honestly.",
+  "id": "/",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0c0b",
+  "theme_color": "#0a0c0b",
+  "categories": ["games", "education", "lifestyle"],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192' role='img' aria-label='SideQuest'%3E%3Crect width='192' height='192' fill='%230a0c0b'/%3E%3Cpath d='M96 158V88' stroke='%237de08a' stroke-width='15' stroke-linecap='round'/%3E%3Cpath d='M96 96c0-30 20-50 48-50 0 30-20 50-48 50z' fill='%237de08a'/%3E%3Cpath d='M96 126c0-24-17-40-40-40 0 24 17 40 40 40z' fill='%233fa860'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' role='img' aria-label='SideQuest'%3E%3Crect width='512' height='512' fill='%230a0c0b'/%3E%3Cpath d='M256 420V236' stroke='%237de08a' stroke-width='40' stroke-linecap='round'/%3E%3Cpath d='M256 256c0-80 54-134 128-134 0 80-54 134-128 134z' fill='%237de08a'/%3E%3Cpath d='M256 336c0-64-46-106-106-106 0 64 46 106 106 106z' fill='%233fa860'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' role='img' aria-label='SideQuest'%3E%3Crect width='512' height='512' fill='%230a0c0b'/%3E%3Cpath d='M256 420V236' stroke='%237de08a' stroke-width='40' stroke-linecap='round'/%3E%3Cpath d='M256 256c0-80 54-134 128-134 0 80-54 134-128 134z' fill='%237de08a'/%3E%3Cpath d='M256 336c0-64-46-106-106-106 0 64 46 106 106 106z' fill='%233fa860'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New mission",
+      "short_name": "New mission",
+      "description": "Generate a new outdoor mission",
+      "url": "./?screen=setup"
+    }
+  ]
+}

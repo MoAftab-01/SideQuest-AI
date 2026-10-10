@@ -8,6 +8,15 @@ huggingface/
 models/
 .cache/huggingface/
 
+# Credentials — never commit these
+# HuggingFace gated-repo tokens (google/gemma-3-* needs one), Render API keys.
+.env
+.env.*
+!.env.example
+*.token
+hf_token*
+secrets/
+
 # Player data (privacy: per-player progress stays local)
 data/
 

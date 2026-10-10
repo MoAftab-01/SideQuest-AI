@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5" />
+<title>SideQuest — touch grass</title>
+<meta name="description" content="An outdoor mission game that gets you off the screen. Pick a time budget, get a mission, put the phone away, come back with a photo." />
+<meta name="theme-color" content="#0a0c0b" />
+<meta name="color-scheme" content="dark" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="SideQuest" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a0c0b'/%3E%3Cpath d='M32 50V30' stroke='%237de08a' stroke-width='4' stroke-linecap='round'/%3E%3Cpath d='M32 32c0-9 6-15 14-15 0 9-6 15-14 15z' fill='%237de08a'/%3E%3Cpath d='M32 40c0-7-5-12-12-12 0 7 5 12 12 12z' fill='%233fa860'/%3E%3C/svg%3E" />
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%230a0c0b'/%3E%3Cpath d='M90 142V86' stroke='%237de08a' stroke-width='11' stroke-linecap='round'/%3E%3Cpath d='M90 90c0-25 17-42 40-42 0 25-17 42-40 42z' fill='%237de08a'/%3E%3Cpath d='M90 113c0-20-14-34-34-34 0 20 14 34 34 34z' fill='%233fa860'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ============================ live regions ============================ -->
+<p id="live-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+<p id="live-alert" class="sr-only" role="alert" aria-live="assertive" aria-atomic="true"></p>
+
+<!-- ============================== top bar ============================== -->
+<header class="appbar" id="appbar">
+  <div class="appbar-in">
+    <span class="brand" aria-hidden="true">
+      <svg viewBox="0 0 64 64" width="22" height="22" focusable="false"><path d="M32 52V30" stroke="currentColor" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M32 32c0-9 6-15 14-15 0 9-6 15-14 15z" fill="currentColor"/><path d="M32 41c0-7-5-12-12-12 0 7 5 12 12 12z" fill="currentColor" opacity=".55"/></svg>
+    </span>
+    <span class="brand-txt">SideQuest</span>
+    <button type="button" class="ghost-btn tiny" id="btn-about" aria-haspopup="dialog">
+      <span aria-hidden="true">i</span><span class="sr-only">About this app and the model it uses</span>
+    </button>
+  </div>
+</header>
+
+<!-- ============================== screens ============================== -->
+
+<!-- 1 ───────────────────────────── SETUP ───────────────────────────── -->
+<main class="screens" id="screens">
+
+<section class="screen" id="screen-setup" data-screen="setup" hidden aria-labelledby="setup-h">
+  <div class="scroll">
+    <h1 class="h1" id="setup-h" tabindex="-1">How long have you got?</h1>
+    <p class="sub">Pick a budget. Get one mission. Then put the phone away.</p>
+
+    <div class="field">
+      <div class="field-head">
+        <label class="lbl" for="time-budget">Time budget</label>
+        <output class="time-out" id="time-out" for="time-budget">45 min</output>
+      </div>
+      <input type="range" id="time-budget" name="time-budget"
+             min="5" max="240" step="5" value="45"
+             aria-describedby="time-budget-help" />
+      <div class="range-ticks" aria-hidden="true"><span>5m</span><span>2h</span><span>4h</span></div>
+      <p class="help" id="time-budget-help">Under an hour works best. The mission is fitted to this budget.</p>
+    </div>
+
+    <fieldset class="field">
+      <legend class="lbl">What are you into?</legend>
+      <div class="chips" id="interest-chips" role="group" aria-describedby="interest-help"></div>
+      <p class="help" id="interest-help">
+        <span id="interest-count">0 of 8 picked.</span> Fewer, better-matched picks make a sharper mission.
+      </p>
+    </fieldset>
+
+    <fieldset class="field">
+      <legend class="lbl">Who&rsquo;s coming?</legend>
+      <div class="seg" id="party-seg" role="group"></div>
+    </fieldset>
+
+    <fieldset class="field">
+      <legend class="lbl">Energy</legend>
+      <div class="seg" id="energy-seg" role="group"></div>
+    </fieldset>
+
+    <details class="more" id="more-opts">
+      <summary>Weather, place &amp; access</summary>
+      <div class="more-body">
+        <div class="row2">
+          <div class="field tight">
+            <label class="lbl" for="sel-location">Setting</label>
+            <select id="sel-location" name="sel-location"></select>
+          </div>
+          <div class="field tight">
+            <label class="lbl" for="sel-weather">Weather</label>
+            <select id="sel-weather" name="sel-weather"></select>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field tight">
+            <label class="lbl" for="sel-mobility">Access</label>
+            <select id="sel-mobility" name="sel-mobility"></select>
+          </div>
+          <div class="field tight">
+            <label class="lbl" for="sel-radius">Stay within</label>
+            <select id="sel-radius" name="sel-radius">
+              <option value="200">200 m</option>
+              <option value="500">500 m</option>
+              <option value="800" selected>800 m</option>
+              <option value="1500">1.5 km</option>
+              <option value="3000">3 km</option>
+            </select>
+          </div>
+        </div>
+        <div class="field tight">
+          <label class="lbl" for="inp-avoid">Anything to avoid?</label>
+          <input type="text" id="inp-avoid" name="inp-avoid" maxlength="120"
+                 placeholder="dogs, hills, crowds" autocomplete="off" />
+          <p class="help">Comma separated. Missions mentioning these are filtered out.</p>
+        </div>
+        <div class="field tight">
+          <label class="lbl" for="inp-note">Anything else? <span class="opt">optional</span></label>
+          <input type="text" id="inp-note" name="inp-note" maxlength="400"
+                 placeholder="near a school playground, lots of pavement" autocomplete="off" />
+        </div>
+      </div>
+    </details>
+
+    <div class="cta-dock">
+      <button type="button" class="btn primary big" id="btn-generate">
+        Generate a mission
+      </button>
+      <p class="dock-note" id="gen-note">Runs on this machine. Your photo is the only thing that can leave it.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 2 ──────────────────────────── MISSION CARD ──────────────────────────── -->
+<section class="screen" id="screen-mission" data-screen="mission" hidden aria-labelledby="mission-h">
+  <div class="scroll">
+    <div class="mission-top">
+      <p class="eyebrow" id="mission-time">45 min &middot; 32 XP</p>
+      <h1 class="h1 xl" id="mission-h" tabindex="-1">&nbsp;</h1>
+      <p class="hook" id="mission-hook"></p>
+      <ul class="tags" id="mission-tags" aria-label="Mission tags"></ul>
+    </div>
+
+    <!-- honesty: how this mission was actually produced -->
+    <div id="gen-badge-slot"></div>
+
+    <ol class="steps" id="mission-steps" aria-label="Mission steps"></ol>
+
+    <section class="panel must" id="panel-verify" aria-labelledby="verify-h">
+      <h2 class="panel-h" id="verify-h">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h4l2-2h4l2 2h4v13H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+        Your photo must show
+      </h2>
+      <p class="must-subject" id="verify-subject"></p>
+      <ul class="must-list" id="verify-must" aria-label="Required in the photo"></ul>
+    </section>
+
+    <section class="panel safety" id="panel-safety" aria-labelledby="safety-h" hidden>
+      <h2 class="panel-h" id="safety-h">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 16H3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4M12 17h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Safety notes
+      </h2>
+      <ul class="safety-list" id="safety-list"></ul>
+    </section>
+
+    <div class="cta-dock">
+      <button type="button" class="btn primary big" id="btn-start">
+        I&rsquo;m going out now
+      </button>
+      <button type="button" class="btn ghost" id="btn-reroll">Give me a different mission</button>
+    </div>
+  </div>
+</section>
+
+<!-- 3 ───────────────────────────── AWAY MODE ───────────────────────────── -->
+<section class="screen away" id="screen-away" data-screen="away" hidden aria-labelledby="away-h">
+  <div class="scroll center">
+    <p class="away-kicker" id="away-kicker">Your mission</p>
+    <h1 class="away-title" id="away-h" tabindex="-1">&nbsp;</h1>
+
+    <p class="away-look" id="away-look">
+      <span class="away-look-lbl">Look for</span>
+      <span class="away-look-txt" id="away-look-txt"></span>
+    </p>
+
+    <div class="clock" id="clock-wrap">
+      <div class="clock-num" id="clock-num" aria-hidden="true">45</div>
+      <div class="clock-unit" id="clock-unit">min planned</div>
+      <div class="clock-bar" id="clock-bar" aria-hidden="true"><i id="clock-fill"></i></div>
+      <p class="sr-only" id="clock-sr" role="timer" aria-live="off"></p>
+    </div>
+
+    <div class="away-actions">
+      <button type="button" class="btn go" id="btn-go">GO</button>
+      <button type="button" class="btn ghost" id="btn-back-early" hidden>I didn&rsquo;t go out</button>
+    </div>
+
+    <p class="away-foot" id="away-foot">
+      After you press GO, the screen will sleep on its own. That&rsquo;s the whole point.
+    </p>
+  </div>
+</section>
+
+<!-- 4 ───────────────────────── RETURN / EVIDENCE ───────────────────────── -->
+<section class="screen" id="screen-return" data-screen="return" hidden aria-labelledby="return-h">
+  <div class="scroll">
+    <p class="eyebrow" id="return-eyebrow">Back from outside</p>
+    <h1 class="h1" id="return-h" tabindex="-1">Show me what you found</h1>
+    <p class="sub" id="return-need"></p>
+
+    <div class="field">
+      <span class="lbl" id="photo-lbl">Photo <span class="opt">optional, but nothing can be verified without one</span></span>
+      <div class="photo-row">
+        <label class="btn shot" for="inp-photo" id="photo-btn">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h4l2-2h4l2 2h4v13H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+          <span id="photo-btn-txt">Take or choose a photo</span>
+        </label>
+        <img id="photo-preview" class="photo-prev" alt="Photo you attached" hidden />
+      </div>
+      <input type="file" id="inp-photo" name="inp-photo" accept="image/*" capture="environment" class="sr-only" aria-labelledby="photo-lbl" />
+      <p class="help" id="photo-status" role="status"></p>
+      <button type="button" class="btn ghost tiny" id="btn-photo-clear" hidden>Remove photo</button>
+    </div>
+
+    <div class="field">
+      <label class="lbl" for="inp-note2">What did you see? <span class="opt">optional</span></label>
+      <textarea id="inp-note2" name="inp-note2" rows="3" maxlength="600"
+                placeholder="Three different window grids, all four panes."></textarea>
+    </div>
+
+    <div class="row2">
+      <div class="field tight">
+        <label class="lbl" for="inp-place">Roughly where?</label>
+        <input type="text" id="inp-place" name="inp-place" maxlength="120"
+               placeholder="the park on 5th" autocomplete="off" />
+        <p class="help">Your words, not GPS.</p>
+      </div>
+      <div class="field tight">
+        <label class="lbl" for="inp-elapsed">Minutes outside</label>
+        <input type="number" id="inp-elapsed" name="inp-elapsed" min="0" max="1440" step="1" value="0"
+               inputmode="numeric" />
+        <p class="help" id="elapsed-help">Counted from when you pressed GO.</p>
+      </div>
+    </div>
+
+    <div class="cta-dock">
+      <button type="button" class="btn primary big" id="btn-submit">Submit for checking</button>
+      <button type="button" class="btn ghost" id="btn-still-out">Still outside</button>
+    </div>
+  </div>
+</section>
+
+<!-- 5 ────────────────────────────── VERDICT ────────────────────────────── -->
+<section class="screen" id="screen-verdict" data-screen="verdict" hidden aria-labelledby="verdict-h">
+  <div class="scroll">
+    <p class="eyebrow" id="verdict-quest">Your mission</p>
+    <div id="verdict-badges"></div>
+
+    <h1 class="h1" id="verdict-h" tabindex="-1">&nbsp;</h1>
+    <p class="verdict-summary" id="verdict-summary"></p>
+
+    <div class="xp-line" id="verdict-xp"></div>
+
+    <section class="panel" id="panel-matched" hidden aria-labelledby="matched-h">
+      <h2 class="panel-h" id="matched-h">What matched</h2>
+      <ul class="tick-list" id="matched-list"></ul>
+    </section>
+
+    <section class="panel" id="panel-missing" hidden aria-labelledby="missing-h">
+      <h2 class="panel-h" id="missing-h">What was missing</h2>
+      <ul class="cross-list" id="missing-list"></ul>
+    </section>
+
+    <section class="panel retry" id="panel-retry" hidden aria-labelledby="retry-h">
+      <h2 class="panel-h" id="retry-h">Try again</h2>
+      <p class="help" id="retry-why"></p>
+      <button type="button" class="btn primary" id="btn-retry">Retake the photo</button>
+    </section>
+
+    <section class="panel" id="panel-vnotes" hidden aria-labelledby="vnotes-h">
+      <h2 class="panel-h" id="vnotes-h">How this was checked</h2>
+      <dl class="kv" id="vnotes-kv"></dl>
+    </section>
+
+    <div class="cta-dock">
+      <button type="button" class="btn primary big" id="btn-summary">See your progress</button>
+      <button type="button" class="btn ghost" id="btn-again">New mission</button>
+    </div>
+  </div>
+</section>
+
+<!-- 6 ──────────────────────────── SUMMARY ──────────────────────────── -->
+<section class="screen" id="screen-summary" data-screen="summary" hidden aria-labelledby="summary-h">
+  <div class="scroll">
+    <p class="eyebrow">Session</p>
+    <h1 class="h1" id="summary-h" tabindex="-1">You were outside</h1>
+
+    <div class="hero-stat">
+      <div class="hero-num" id="sum-minutes">0</div>
+      <div class="hero-lbl">minutes outdoors</div>
+    </div>
+
+    <section class="panel" aria-labelledby="lvl-h">
+      <div class="lvl-head">
+        <h2 class="panel-h" id="lvl-h">Level <span id="sum-level">1</span></h2>
+        <span class="xp-pill" id="sum-xp">0 XP</span>
+      </div>
+      <div class="lvl-bar" role="progressbar" id="lvl-bar"
+           aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="lvl-h">
+        <i id="lvl-fill"></i>
+      </div>
+      <p class="help" id="lvl-next">&nbsp;</p>
+    </section>
+
+    <section class="panel" aria-labelledby="counts-h">
+      <h2 class="panel-h" id="counts-h">What the model actually said</h2>
+      <div class="counts">
+        <div class="count ok">
+          <div class="count-num" id="cnt-verified">0</div>
+          <div class="count-lbl">verified by AI</div>
+        </div>
+        <div class="count warn">
+          <div class="count-num" id="cnt-uncertain">0</div>
+          <div class="count-lbl">uncertain</div>
+        </div>
+        <div class="count bad">
+          <div class="count-num" id="cnt-rejected">0</div>
+          <div class="count-lbl">rejected</div>
+        </div>
+      </div>
+      <p class="help" id="counts-note"></p>
+    </section>
+
+    <section class="panel est" aria-labelledby="saved-h">
+      <h2 class="panel-h" id="saved-h">Screen time you didn&rsquo;t spend</h2>
+      <div class="hero-stat sm">
+        <div class="hero-num" id="sum-saved">0 min</div>
+      </div>
+      <p class="help">
+        <strong>This is an estimate, not a measurement.</strong> It is your outdoor
+        minutes restated as screen minutes. The app has no access to your other apps and
+        no telemetry.
+      </p>
+    </section>
+
+    <div class="cta-dock">
+      <button type="button" class="btn primary big" id="btn-new-mission">Go outside again</button>
+      <button type="button" class="btn ghost" id="btn-about-2">How honest is this?</button>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ============================ error banner ============================ -->
+<div class="err-bar" id="err-bar" hidden role="alert">
+  <div class="err-in">
+    <div class="err-txt">
+      <strong class="err-title" id="err-title">Something went wrong</strong>
+      <span class="err-body" id="err-body"></span>
+    </div>
+    <div class="err-actions">
+      <button type="button" class="btn tiny" id="btn-err-retry">Try again</button>
+      <button type="button" class="btn ghost tiny" id="btn-err-close" aria-label="Dismiss error">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== about sheet ============================== -->
+<div class="sheet-wrap" id="about-wrap" hidden>
+  <div class="sheet-scrim" id="about-scrim"></div>
+  <div class="sheet" id="about-sheet" role="dialog" aria-modal="true" aria-labelledby="about-h" tabindex="-1">
+    <div class="sheet-grip" aria-hidden="true"></div>
+    <h2 class="panel-h" id="about-h">What this app actually does</h2>
+    <div class="sheet-body" id="about-body"></div>
+    <button type="button" class="btn primary" id="btn-about-close">Close</button>
+  </div>
+</div>
+
+<script src="app.js" defer></script>
+</body>
+</html>

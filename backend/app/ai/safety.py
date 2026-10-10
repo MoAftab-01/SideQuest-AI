@@ -53,13 +53,23 @@ class Rule:
 
 
 def _p(*alts: str) -> re.Pattern[str]:
-    """Word-boundary alternation matcher, case-insensitive.
+    """Word-boundary alternation matcher, case-insensitive and plural-tolerant.
 
-    Uses \\b boundaries so "cat" does not match inside "category", which
+    Uses ``\\b`` boundaries so "cat" does not match inside "category", which
     matters: several rules key off short words.
+
+    Each alternative additionally accepts an optional trailing ``s``/``es`` so a
+    single word in the rule covers its plural. This was a real bypass, not a
+    theoretical one: the rules listed "climb", "roof", "ladder", "storm" and
+    friends, so a model mission reading "Climbs over the gate", "Roofs of the
+    shops" or "Storms forecast later" passed a blocking gate untouched. Plural
+    phrasing is the *common* case for text a language model writes, so a gate
+    that only catches the singular is a gate that mostly does not fire. The
+    optional suffix cannot swallow the boundary check -- ``\\b`` still applies
+    after it, so "categories" is not matched by "cat" while "cats" is.
     """
     joined = "|".join(alts)
-    return re.compile(rf"\b(?:{joined})\b", re.IGNORECASE)
+    return re.compile(rf"\b(?:{joined})(?:e?s)?\b", re.IGNORECASE)
 
 
 #: Hazards that make a mission unsafe enough to block outright.
@@ -77,7 +87,16 @@ BLOCKING_RULES: tuple[Rule, ...] = (
         "blocking",
         "Height exposure was removed. Climbing, ledges and rooftops are out of "
         "scope for this app.",
-        _p("climb", "climbing", "climbed", "scramble", "ladder", "roof", "rooftop",
+        # "roof"/"rooftop" appear only in the act phrases. The bare noun was
+        # dropped on purpose: once _p() became plural-tolerant, a bare "roof"
+        # matched "roofs", and a mission telling the player to stand somewhere
+        # they "can see sky and at least one line of trees or roofs" -- looking
+        # *at* rooftops from the pavement -- was blocked as a height hazard. That
+        # is a false positive on a perfectly safe instruction, and it killed the
+        # bird-count template outright. The hazard is being up there, so the rule
+        # matches the climbing, not the viewing.
+        _p("climb", "climbing", "climbed", "scramble", "ladder", "climb onto",
+           "climb up", "on the roof", "on the rooftop", "rooftop access",
            "ledge", "cliff", "edge of the", "balcony", "high wall", "gantry",
            "antenna", "treetop", "treehouse"),
     ),
@@ -164,6 +183,63 @@ WARNING_RULES: tuple[Rule, ...] = (
 
 ALL_RULES: tuple[Rule, ...] = BLOCKING_RULES + WARNING_RULES
 
+# ---------------------------------------------------------------------------
+# Messages this module writes onto a quest
+# ---------------------------------------------------------------------------
+# These are hoisted to constants rather than left inline in
+# `check_request_feasibility` so `_GATE_AUTHORED` below is complete by
+# construction: add a warning here and it is excluded from scanning
+# automatically, with no second place to forget.
+
+MSG_BUDGET_OVERRUN = (
+    "This plan is longer than the time you asked for. Trim it or come back "
+    "with more time."
+)
+MSG_MOBILITY_MISMATCH = (
+    "This route does not match the step-free/avoid-stairs setting you chose."
+)
+MSG_KID_SAFETY = (
+    "With kids along: stay where you can see them, and avoid water and drops."
+)
+MSG_DOG_SAFETY = (
+    "Off-lead near roads or water is where dogs get lost. Keep it short and "
+    "supervised."
+)
+MSG_WET_WEATHER = (
+    "Wet ground and playground equipment get slippery. Skip any climbing "
+    "equipment if it is slick."
+)
+MSG_ENERGY_MISMATCH = (
+    "This is more effort than a low-energy day. Keep it to a short version if "
+    "you are tired."
+)
+
+#: Every advisory string this module can attach to a mission.
+#:
+#: A striking number of them contain the very keyword their own rule matches:
+#: `haz-height`'s own message says "Climbing", `haz-traffic`'s says "Road", and
+#: of the request-feasibility warnings `MSG_DOG_SAFETY` trips `haz-traffic`
+#: (*blocking*) while `MSG_WET_WEATHER` trips `haz-height` (*blocking*). Left in
+#: scope, a mission can be blocked by a caution the gate itself wrote -- which
+#: is not a theoretical hazard: it killed the wet-reflections template on every
+#: seed, silently degrading it to the last-resort mission.
+#:
+#: They are excluded from the scan, and *only* they are. Notes authored by a
+#: template or by the model are still scanned, because a hazard hidden in a
+#: caution is exactly as dangerous as one hidden in an instruction and the test
+#: suite pins that. The distinction is provenance, not location.
+_GATE_AUTHORED: frozenset[str] = frozenset(
+    [r.message for r in ALL_RULES]
+    + [
+        MSG_BUDGET_OVERRUN,
+        MSG_MOBILITY_MISMATCH,
+        MSG_KID_SAFETY,
+        MSG_DOG_SAFETY,
+        MSG_WET_WEATHER,
+        MSG_ENERGY_MISMATCH,
+    ]
+)
+
 
 # ---------------------------------------------------------------------------
 # Constraint checks
@@ -195,11 +271,25 @@ class Screen:
 
 
 def mission_text(quest: Quest) -> str:
-    """All human-readable prose on a mission, joined for keyword scanning."""
+    """All human-readable prose on a mission, joined for keyword scanning.
+
+    ``safety_notes`` is included, because a caution is a place a hazard can hide
+    just as well as an instruction is -- a generator that wrote "climb the
+    fence" into a note has asked for exactly the thing the gate exists to stop.
+    The gate's *own* advisories are the one exception, and they are filtered by
+    exact string match against ``_GATE_AUTHORED`` rather than by dropping the
+    whole field: six of the twelve rule messages contain the keyword their own
+    rule matches, so a blanket exclusion would hide real hazards while a blanket
+    inclusion lets the gate block missions with its own advice.
+
+    Filtering by string identity rather than by rule id matters: the same words
+    arriving from a template or the model are still scanned, because the
+    exclusion is about *provenance*, not about the vocabulary a sentence uses.
+    """
     parts: list[str] = [quest.title, quest.hook, quest.premise]
     parts += [s.instruction for s in quest.steps]
     parts += [s.detail for s in quest.steps]
-    parts += list(quest.safety_notes)
+    parts += [n for n in quest.safety_notes if n not in _GATE_AUTHORED]
     return "\n".join(p for p in parts if p)
 
 
@@ -226,12 +316,7 @@ def check_request_feasibility(req: QuestRequest, quest: Quest) -> Screen:
     # A step that asks for more time than the whole budget is not feasible.
     total = sum(s.approx_minutes for s in quest.steps)
     if total > req.time_budget_minutes * 1.5:
-        screen.add(
-            "budget-overrun",
-            "warning",
-            "This plan is longer than the time you asked for. Trim it or "
-            "come back with more time.",
-        )
+        screen.add("budget-overrun", "warning", MSG_BUDGET_OVERRUN)
 
     if req.mobility is not Mobility.UNRESTRICTED:
         text = mission_text(quest).lower()
@@ -240,12 +325,7 @@ def check_request_feasibility(req: QuestRequest, quest: Quest) -> Screen:
             "steep", "gravel slope", "uneven ground", "rough ground",
         )
         if inaccessible.search(text):
-            screen.add(
-                "mobility-mismatch",
-                "blocking",
-                "This route does not match the step-free/avoid-stairs setting "
-                "you chose.",
-            )
+            screen.add("mobility-mismatch", "blocking", MSG_MOBILITY_MISMATCH)
 
     if req.party is PartyType.WITH_KIDS:
         text = mission_text(quest).lower()
@@ -254,43 +334,30 @@ def check_request_feasibility(req: QuestRequest, quest: Quest) -> Screen:
             "bridge", "balcony", "water", "parking lot",
         )
         if risky.search(text):
-            screen.add(
-                "kid-safety",
-                "warning",
-                "With kids along: stay where you can see them, and avoid water "
-                "and drops.",
-            )
+            screen.add("kid-safety", "warning", MSG_KID_SAFETY)
 
     if req.party is PartyType.WITH_DOG:
         text = mission_text(quest).lower()
         if _p("off-lead", "off leash", "unleashed").search(text):
-            screen.add(
-                "dog-safety",
-                "warning",
-                "Off-lead near roads or water is where dogs get lost. Keep it "
-                "short and supervised.",
-            )
+            screen.add("dog-safety", "warning", MSG_DOG_SAFETY)
 
     if req.weather in (Weather.RAIN, Weather.SNOW):
         text = mission_text(quest).lower()
         if _p("slippery", "icy", "uneven", "rocks", "gravel", "mud", "metal stairs",
               "playground equipment", "playground", "slide").search(text):
-            screen.add(
-                "wet-weather",
-                "warning",
-                "Wet ground and playground equipment get slippery. Skip the "
-                "climbing bits if it is slick.",
-            )
+            # This message trips `haz-height` (blocking) on the next scan,
+            # because it contains the word "climbing". The advice is *against*
+            # climbing, so flagging it was the gate contradicting itself: a safe
+            # mission blocked by a warning the gate had just written. The
+            # exclusion in `mission_text` is what fixes that, rather than
+            # rewording the advice until it stops tripping a rule -- rewording
+            # hides the symptom and leaves the next message to trip it again.
+            screen.add("wet-weather", "warning", MSG_WET_WEATHER)
 
     if req.energy is EnergyLevel.LOW:
         text = mission_text(quest).lower()
         if _p("run", "sprint", "ascent", "climb", "hike", "uphill", "steep").search(text):
-            screen.add(
-                "energy-mismatch",
-                "warning",
-                "This is more effort than a low-energy day. Keep it to a short "
-                "version if you are tired.",
-            )
+            screen.add("energy-mismatch", "warning", MSG_ENERGY_MISMATCH)
 
     return screen
 
@@ -314,9 +381,19 @@ def gate(quest: Quest, req: QuestRequest) -> Quest:
     report.passed = not any(f.severity == "blocking" for f in report.findings)
 
     quest.safety = report
-    quest.safety_notes = [
-        f.message for f in report.findings if f.severity in ("warning", "blocking")
-    ][:6]
+    # Seed from the notes the mission already carries, then append any new rule
+    # message. This used to *replace* the list wholesale with rule messages,
+    # which silently destroyed notes the generator had deliberately authored --
+    # including the one telling the player their `avoid` list was honoured. That
+    # note is the only place the app confirms a constraint it cannot enforce, so
+    # dropping it turned an honest disclosure into silence.
+    notes: list[str] = list(quest.safety_notes)[:6]
+    for finding in report.findings:
+        if len(notes) >= 6:
+            break
+        if finding.severity in ("warning", "blocking") and finding.message not in notes:
+            notes.append(finding.message)
+    quest.safety_notes = notes
     return quest
 
 

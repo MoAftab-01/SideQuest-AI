@@ -1,0 +1,113 @@
+{
+  "generated_at": 1791634881.3432024,
+  "generated_at_iso": "2026-10-10T12:21:21Z",
+  "environment": {
+    "probe": {
+      "device": "cuda",
+      "cuda": true,
+      "torch": "2.6.0+cu124",
+      "gpu_name": "NVIDIA GeForce RTX 3070 Ti Laptop GPU"
+    },
+    "torch": "2.6.0+cu124",
+    "transformers": "4.57.1",
+    "python": "3.10.0",
+    "logical_cores": 20,
+    "ram_gb": 31.7
+  },
+  "planning_model": {
+    "engine": "gemma",
+    "model_id": null,
+    "available": false,
+    "is_baseline": false,
+    "unavailable_reason": "google/gemma-3-4b-it: OSError: You are trying to access a gated repo.\nMake sure to have access to it at https://huggingface.co/google/gemma-3-4b-it.\n401 Client Error. (Request ID: Root=1-6aca2dc0-7d7ae7cd55c4e2d370fcf77c;5ac43e41-2f22-433d-83f7-0721d90dca34)\n\nCannot access gated repo for url https://huggingface.co/google/gemma-3-4b-it/resolve/main/config.json.\nAccess to model google/gemma-3-4b-it is restricted. You must have access to it and be authenticated to access it. Please log in.; google/gemma-3-1b-it: OSError: You are trying to access a gated repo.\nMake sure to have access to it at https://huggingface.co/google/gemma-3-1b-it.\n401 Client Error. (Request ID: Root=1-6aca2dc1-25f337802b8ceea8734cac05;24fd3def-8c48-4e92-a695-1ce85ffbedb1)\n\nCannot access gated repo for url https://huggingface.co/google/gemma-3-1b-it/resolve/main/config.json.\nAccess to model google/gemma-3-1b-it is restricted. You must have access to it and be authenticated to access it. Please log in.",
+    "measured": false,
+    "n_requests": 8,
+    "model_used_pct": 0.0,
+    "fallback_used_pct": 100.0,
+    "parse_rate_pct": 0.0,
+    "safety_gate_pass_pct": 100.0,
+    "safety_gate_block_count": 0,
+    "within_time_budget_pct": 100.0,
+    "mission_specific_verification_pct": 100.0,
+    "diversity_ratio": 0.625,
+    "latency_ms_mean": 1.8,
+    "latency_ms_p50": 1.8,
+    "latency_ms_max": 2.1,
+    "fallback_reasons": {
+      "google/gemma-3-4b-it": 8
+    }
+  },
+  "planning_baseline": {
+    "engine": "deterministic",
+    "model_id": null,
+    "available": false,
+    "is_baseline": true,
+    "unavailable_reason": null,
+    "measured": true,
+    "n_requests": 8,
+    "model_used_pct": 0.0,
+    "fallback_used_pct": 100.0,
+    "parse_rate_pct": 0.0,
+    "safety_gate_pass_pct": 100.0,
+    "safety_gate_block_count": 0,
+    "within_time_budget_pct": 100.0,
+    "mission_specific_verification_pct": 100.0,
+    "diversity_ratio": 0.625,
+    "latency_ms_mean": 1.9,
+    "latency_ms_p50": 1.8,
+    "latency_ms_max": 2.2,
+    "fallback_reasons": {
+      "baseline": 8
+    }
+  },
+  "robustness": {
+    "scenarios": {
+      "engine_unavailable": {
+        "survived": true,
+        "source": "fallback",
+        "claimed_ai": false,
+        "detail": "injected failure"
+      },
+      "unparseable_model_output": {
+        "survived": true,
+        "source": "fallback",
+        "claimed_ai": false,
+        "detail": "model output unparseable (unparseable_json)"
+      },
+      "unsafe_model_output": {
+        "survived": true,
+        "source": "fallback",
+        "claimed_ai": false,
+        "detail": "safety gate blocked model mission: haz-water-unprotected: Open water without a lifeguard or PFD is the main way this game could hurt someone. Pick a bank you ca"
+      },
+      "verification_without_model": {
+        "survived": true,
+        "claimed_ai": false,
+        "detail": "That photo could not be decoded. Try uploading it again."
+      }
+    },
+    "all_scenarios_survived": true
+  },
+  "pass_criteria": {
+    "false_verified_max": 0,
+    "min_decidable_cases": 6
+  },
+  "verification": {
+    "available": false,
+    "model_id": null,
+    "unavailable_reason": "google/gemma-3-4b-it: OSError: You are trying to access a gated repo.\nMake sure to have access to it at https://huggingface.co/google/gemma-3-4b-it.\n401 Client Error. (Request ID: Root=1-6aca2dc0-7d7ae7cd55c4e2d370fcf77c;5ac43e41-2f22-433d-83f7-0721d90dca34)\n\nCannot access gated repo for url https://huggingface.co/google/gemma-3-4b-it/resolve/main/config.json.\nAccess to model google/gemma-3-4b-it is restricted. You must have access to it and be authenticated to access it. Please log in.; google/gemma-3-1b-it: OSError: You are trying to access a gated repo.\nMake sure to have access to it at https://huggingface.co/google/gemma-3-1b-it.\n401 Client Error. (Request ID: Root=1-6aca2dc1-25f337802b8ceea8734cac05;24fd3def-8c48-4e92-a695-1ce85ffbedb1)\n\nCannot access gated repo for url https://huggingface.co/google/gemma-3-1b-it/resolve/main/config.json.\nAccess to model google/gemma-3-1b-it is restricted. You must have access to it and be authenticated to access it. Please log in.",
+    "n_cases": 8,
+    "decidable_cases": 7,
+    "ambiguous_cases_excluded": 1,
+    "accuracy_on_decidable_pct": 0.0,
+    "false_verified_count": 0,
+    "decision_matrix": {
+      "verified->uncertain": 3,
+      "rejected->uncertain": 4,
+      "ambiguous->uncertain": 1
+    },
+    "latency_ms_mean": 0.1,
+    "latency_ms_p95": 0.2
+  },
+  "duration_s": 0.0
+}

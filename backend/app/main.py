@@ -222,7 +222,14 @@ def verify(
 # ---------------------------------------------------------------------------
 
 if os.path.isdir(WEB_DIR):
-    app.mount("/assets", StaticFiles(directory=os.path.join(WEB_DIR, "assets")), name="assets")
+    # Guard the assets directory itself, not just its parent. Starlette's
+    # StaticFiles raises RuntimeError in __init__ when the directory is absent,
+    # so an unguarded mount made a fresh checkout fail at import time: `web/`
+    # exists but ships no `assets/` (the front end is plain files, no build
+    # step), and `uvicorn app.main:app` would not start.
+    _assets_dir = os.path.join(WEB_DIR, "assets")
+    if os.path.isdir(_assets_dir):
+        app.mount("/assets", StaticFiles(directory=_assets_dir), name="assets")
 
     @app.get("/")
     def index():

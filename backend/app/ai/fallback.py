@@ -2025,8 +2025,22 @@ def _build(req: QuestRequest, ctx: _Ctx, tpl: Template, rng: random.Random) -> Q
         if rendered not in notes:
             notes.append(rendered)
     if req.avoid:
-        avoid_text = ", ".join(req.avoid[:3])
-        note = f"You asked to avoid {avoid_text}; this route keeps clear of it."
+        # Do NOT quote the player's avoid terms back into a note. `mission_text`
+        # includes `safety_notes`, so "You asked to avoid busy roads" put the
+        # literal string "road" in front of `haz-traffic` and made *every*
+        # candidate look blocked. Any avoid term that is also a hazard keyword
+        # ("roads", "river", "climb", "storm", "drains") exhausted the entire
+        # template library and silently degraded every such player to the
+        # last-resort mission -- while `_attach_report` still reported
+        # `passed=True`, so the app claimed the mission was safe as the gate
+        # rejected it.
+        #
+        # Naming the terms back adds nothing: the player just typed them. The
+        # disclosure stays, and stays truthful, because `_rank_templates` really
+        # does drop every template mentioning them (`_avoided`). It simply
+        # refers to the constraint instead of restating its vocabulary, because
+        # a statement *about* a hazard is not a hazard.
+        note = "This route stays clear of everything you asked to avoid."
         if note not in notes:
             notes.insert(0, note)
     if req.party is PartyType.WITH_KIDS and len(notes) < 6:
@@ -2091,17 +2105,31 @@ _LEFTOVER_RE = re.compile(r"\{[a-z_]+\}")
 
 
 def _attach_report(quest: Quest, req: QuestRequest) -> Quest:
-    """Record the gate's non-blocking findings on an accepted mission."""
+    """Record the gate's findings on an accepted mission.
+
+    ``passed`` is *derived* from the findings rather than hard-coded. It used to
+    be ``True`` on every call, on the reasoning that only accepted missions
+    reach here -- but the last-resort mission at the bottom of ``fallback_quest``
+    is built and reported without being re-checked, so a mission the gate
+    rejected could still ship carrying ``passed=True``. That is the worst
+    possible failure for this field: the app asserting a mission is safe at the
+    exact moment its own policy says it is not. Computing it from the findings
+    means the report cannot disagree with the rules that produced it.
+    """
     text_screen = scan_quest(quest)
     req_screen = check_request_feasibility(req, quest)
-    findings: list[SafetyFinding] = [
-        f for f in req_screen.findings + text_screen.findings if f.severity != "blocking"
-    ]
+    all_findings = req_screen.findings + text_screen.findings
+    blocking = [f for f in all_findings if f.severity == "blocking"]
+    findings: list[SafetyFinding] = [f for f in all_findings if f.severity != "blocking"]
     triggered: list[str] = []
-    for finding in findings:
+    for finding in all_findings:
         if finding.rule not in triggered:
             triggered.append(finding.rule)
-    quest.safety = SafetyReport(passed=True, findings=findings[:6], triggered=triggered)
+    quest.safety = SafetyReport(
+        passed=not blocking,
+        findings=(findings + blocking)[:6],
+        triggered=triggered,
+    )
     for finding in findings:
         if len(quest.safety_notes) >= 6:
             break
