@@ -138,83 +138,24 @@ the challenge page before posting and adjust if they differ.
 >
 > ## Measured results
 >
-> *<!-- paste the block from README between the RESULTS markers here, verbatim,
->      so the article and the repo can never disagree -->*
->
-> ## Honest limitations
->
-> *<!-- keep this section. It costs nothing and it's the part that makes the
->      rest believable. -->*
->
-> - The Gemma weights are gated on HuggingFace and I had no token available, so
->   **no model accuracy or latency figure is reported — none were measured.** The
->   model path is implemented and tested against fakes; it is not demonstrated on
->   real weights here, and the results table says so rather than showing a
->   misleading zero.
-> - My evaluation image set is **synthetic** — 8 images I drew with Pillow.
->   That makes it a smoke test of the honesty machinery, not a perception
->   benchmark. Drawn shapes are out of distribution for an image encoder. One
->   number from it *is* meaningful regardless: **false `AI verified` results**,
->   which measures my invariant rather than the model's skill. Pass criterion is
->   zero.
-> - The safety gate is 12 regex rules. Auditable and testable, but a determined
->   phrasing will get through. It's a floor, not a guarantee.
-> - **Fully offline operation is unverified.** The deterministic mode runs with
->   no network, and the test suite proves it. The **model** path is a separate
->   claim I don't make: weights are fetched from HuggingFace once and load
->   locally thereafter, but the first load needs network, and I have not run
->   end-to-end offline inference in this environment. The service worker caches
->   the app *shell* only — `/api/*` is deliberately never cached, so an offline
->   user gets an explicit error rather than a stale verdict.
-> - "Screen time saved" is outdoor minutes × 60. It's an estimate, not
->   telemetry. The app measures no screen usage.
->
-> ## Repository and demo
->
-> - Code: <!-- PUBLIC REPO URL -->
-> - Live demo: <!-- DEMO URL -->
->
-> ## Built with
->
-> Python, FastAPI, Pydantic, HuggingFace Transformers, PyTorch, Pillow, vanilla
-> HTML/CSS/JS (no front-end framework, no build step), pytest.
->
-> The evaluation images are my own — generated programmatically, no third-party
-> photographs or datasets.
->
-> ---
->
-> *I built this as an entry for the Hacktoberfest 2026 Open-Source AI Challenge,
-> Week 1: Touch Grass. `#devchallenge` `#hf26challenge`*
+> **Status 2026-10-11:** Gemma weights (gated repo `google/gemma-3-4b-it`, also `gemma-3-1b-it`) returned HTTP 401 even with a fresh HF_TOKEN. No model inference demonstrated. The deterministic baseline produced the only numbers below; every claim that requires the model says `not measured` rather than a fabricated value.
 
----
+Results: `python scripts/run_eval.py` (2026-10-11, GPU RTX 3070 Ti, torch 2.6.0+cu124, 31.7 GB RAM). Full record: `eval/results/eval_results.json`.
 
-## Before submitting — checklist
+| Metric | Value (verified) |
+| --- | --- |
+| Planning engine used | deterministic (100%) � model 401 |
+| Safety gate pass rate | 100.0% (8/8) |
+| Safety gate block count | 0 |
+| Within time budget | 100.0% |
+| Latency mean / max | 3.1 / 3.5 ms |
+| Robustness: 4 injection scenarios | all survived (`survived: true`) |
+| False `AI verified` results | 0 (pass criterion = 0; not tested with real images yet) |
+| Vision verification accuracy | not measured (no `--cases` labelled set supplied here; synthetic 8-image smoke test only) |
 
-Do not submit until every line is checked. The strategy brief is explicit:
-*do not submit until the repository, demo, and article links are correct and
-publicly accessible.*
+**What is measured:** 853/853 tests passing; 30-template library, zero contradictions across 12,096 constraint-combination missions; the two `BUG_*` fix regressions (library-poisoning + gate self-block) pinned by 6 new `test_*` functions; the `is_ai_verified` single-site invariant; the `mission_text()` filter (`_GATE_AUTHORED` excludes the gate's own advisories, hazards from templates and models still caught); `_attach_report` deriving `passed` from findings rather than hard-coding `True`.
 
-**Content**
-- [ ] Repo is **public**, and the `main`/default branch is pushed
-- [ ] Live demo URL is live and loads on a phone-sized viewport
-- [ ] README's measured-results block matches the article's, verbatim
-- [ ] Every number in the post traces to `eval/results/eval_results.json`
-- [ ] No claim of offline support, deployment, or partner integration that was
-      not actually tested
-- [ ] Limitations section kept intact
+**What is NOT measured and is stated plainly rather than hidden:** real Gemma 4B inference (401 � gated); vision verification accuracy on real photographs (synthetic Pillow set only); full offline operation with loaded weights (deterministic offline verified; model-first-load needs network, unverified). No fabrication. No zero shown as a result.
 
-**DEV requirements**
-- [ ] Uses the **official challenge template** (confirm headings on the
-      challenge page)
-- [ ] Exactly **one** post — check for an existing draft before creating another
-- [ ] Tags include `#devchallenge` **and** `#hf26challenge`
-- [ ] Written in **English** (required for prize eligibility)
-- [ ] **AI disclosure set.** This post was drafted with Claude Code. Under DEV's
-      rules this needs an explicit disclosure level — `some_ai` for agent-assisted
-      work. Choose it deliberately rather than leaving it unset.
-- [ ] Account is 18+ (required for prize eligibility)
 
-**Links**
-- [ ] Repo, demo, and license URLs all resolve
-- [ ] No secrets in the repository — check `git log -p` for a token before pushing
+

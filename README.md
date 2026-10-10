@@ -198,38 +198,30 @@ Rather than leave the section empty, here is what *was* measured, on an
 **RTX 3070 Ti (8 GB), torch 2.6.0+cu124, transformers 4.57.1, Python 3.10**:
 
 <!-- RESULTS:BEGIN -->
+> **Status 2026-10-11:** the Gemma weights returned 401 even with a valid HF_TOKEN (gated repo `google/gemma-3-4b-it`). No model inference was demonstrated; only the deterministic baseline produced numbers. All four robustness injections survived. False `AI verified`: 0 (pass). See `eval/results/eval_results.json` for the full record.
 
-Generated `2026-10-10T12:21:21Z` on **NVIDIA GeForce RTX 3070 Ti Laptop GPU**, torch `2.6.0+cu124`, transformers `4.57.1`, Python `3.10.0`, 31.7 GB RAM.
+---
 
-> **No model was measured for this run**, so no Gemma figures appear below. The Gemma repos are gated on HuggingFace and no token was available; every load returned HTTP 401. What follows is the deterministic baseline, which genuinely runs with no weights.
+Generated `2026-10-11T03:06:27Z` on **NVIDIA GeForce RTX 3070 Ti Laptop GPU**, torch `2.6.0+cu124`, transformers `4.57.1`, Python `3.10.0`, 31.7 GB RAM.
 
-| Metric | Deterministic baseline | Gemma |
+| Metric | Deterministic baseline (verified) | Gemma (not measured) |
 | --- | --- | --- |
+| Planning engine | deterministic | gemma (401 — gated) |
 | Missions from model (%) | 0.0 | not measured |
 | Fell back to deterministic (%) | 100.0 | not measured |
-| Model JSON parse rate (%) | 0.0 | not measured |
-| Passed safety gate (%) | 100.0 | not measured |
-| Blocked by safety gate (count) | 0 | not measured |
-| Within stated time budget (%) | 100.0 | not measured |
-| Missions with a verification subject (%) | 100.0 | not measured |
-| Mission diversity (distinct / 1.0) | 0.6 | not measured |
-| Latency mean (ms) | 1.9 | not measured |
-| Latency p50 (ms) | 1.8 | not measured |
-| Latency max (ms) | 2.2 | not measured |
+| Safety gate pass (%) | 100.0 (8/8) | not measured |
+| Safety gate block count | 0 | not measured |
+| Within time budget (%) | 100.0 | not measured |
+| Latency mean / max (ms) | 3.1 / 3.5 | not measured |
+| Diversity (max 1.0) | 0.625 | not measured |
+| Robustness: engine unavailable | yes (claimed: no) | — |
+| Robustness: unparseable model output | yes (claimed: no) | — |
+| Robustness: unsafe model output | yes (claimed: no, blocked by gate) | — |
+| Robustness: verification without model | yes (claimed: no) | — |
 
-**Verification on the labelled image set** (7 decidable, 1 ambiguous held out):
+**What is genuinely verified:** every claim that doesn't need the model — deterministic mission generation (30 templates, all pass gate, 12,096 constraint-combination missions with zero contradictions), the honesty invariant (`is_ai_verified` only at one site), the failure-injection suite (4 scenarios, all survive without claiming AI verification), and the network-disabled mode (`HF_HUB_OFFLINE=1` + `TRANSFORMERS_OFFLINE=1` passes).
 
-- **False `AI verified` results: 0** (pass criterion: 0)
-- Accuracy: **not measured** -- no vision-capable model was loaded, so every case fell through to the deterministic `uncertain` path. A percentage here would measure the fallback, not the model.
-
-**Failure injection** -- each scenario breaks something and checks the app still answers without claiming AI verification:
-
-| Scenario | Survived | Claimed AI? |
-| --- | --- | --- |
-| `engine_unavailable` | yes | no |
-| `unparseable_model_output` | yes | no |
-| `unsafe_model_output` | yes | no |
-| `verification_without_model` | yes | no |
+**What is NOT verified:** vision verification on real images (synthetic set only; ambiguous case held out; accuracy unscored), end-to-end model inference (weights gated — 401 on both `gemma-3-4b-it` and `gemma-3-1b-it`), full offline operation with weights loaded. These are stated explicitly rather than hidden behind zeros.
 
 <!-- RESULTS:END -->
 

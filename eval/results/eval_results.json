@@ -1,6 +1,6 @@
 {
-  "generated_at": 1791634881.3432024,
-  "generated_at_iso": "2026-10-10T12:21:21Z",
+  "generated_at": 1791668187.5794477,
+  "generated_at_iso": "2026-10-10T21:36:27Z",
   "environment": {
     "probe": {
       "device": "cuda",
@@ -19,7 +19,7 @@
     "model_id": null,
     "available": false,
     "is_baseline": false,
-    "unavailable_reason": "google/gemma-3-4b-it: OSError: You are trying to access a gated repo.\nMake sure to have access to it at https://huggingface.co/google/gemma-3-4b-it.\n401 Client Error. (Request ID: Root=1-6aca2dc0-7d7ae7cd55c4e2d370fcf77c;5ac43e41-2f22-433d-83f7-0721d90dca34)\n\nCannot access gated repo for url https://huggingface.co/google/gemma-3-4b-it/resolve/main/config.json.\nAccess to model google/gemma-3-4b-it is restricted. You must have access to it and be authenticated to access it. Please log in.; google/gemma-3-1b-it: OSError: You are trying to access a gated repo.\nMake sure to have access to it at https://huggingface.co/google/gemma-3-1b-it.\n401 Client Error. (Request ID: Root=1-6aca2dc1-25f337802b8ceea8734cac05;24fd3def-8c48-4e92-a695-1ce85ffbedb1)\n\nCannot access gated repo for url https://huggingface.co/google/gemma-3-1b-it/resolve/main/config.json.\nAccess to model google/gemma-3-1b-it is restricted. You must have access to it and be authenticated to access it. Please log in.",
+    "unavailable_reason": "google/gemma-3-4b-it: OSError: You are trying to access a gated repo.\nMake sure to have access to it at https://huggingface.co/google/gemma-3-4b-it.\n401 Client Error. (Request ID: Root=1-6acaafda-27b836d0459ecf324210cd2e;4523b3f0-1f4d-4ffb-afb4-871d4edcce34)\n\nCannot access gated repo for url https://huggingface.co/google/gemma-3-4b-it/resolve/main/config.json.\nAccess to model google/gemma-3-4b-it is restricted. You must have access to it and be authenticated to access it. Please log in.; google/gemma-3-1b-it: OSError: You are trying to access a gated repo.\nMake sure to have access to it at https://huggingface.co/google/gemma-3-1b-it.\n401 Client Error. (Request ID: Root=1-6acaafdb-3cc18e21427b5e951ba7633e;6a0e1978-82c3-4738-8170-4e7206b96a2b)\n\nCannot access gated repo for url https://huggingface.co/google/gemma-3-1b-it/resolve/main/config.json.\nAccess to model google/gemma-3-1b-it is restricted. You must have access to it and be authenticated to access it. Please log in.",
     "measured": false,
     "n_requests": 8,
     "model_used_pct": 0.0,
@@ -30,9 +30,9 @@
     "within_time_budget_pct": 100.0,
     "mission_specific_verification_pct": 100.0,
     "diversity_ratio": 0.625,
-    "latency_ms_mean": 1.8,
-    "latency_ms_p50": 1.8,
-    "latency_ms_max": 2.1,
+    "latency_ms_mean": 3.1,
+    "latency_ms_p50": 3.1,
+    "latency_ms_max": 3.5,
     "fallback_reasons": {
       "google/gemma-3-4b-it": 8
     }
@@ -53,9 +53,9 @@
     "within_time_budget_pct": 100.0,
     "mission_specific_verification_pct": 100.0,
     "diversity_ratio": 0.625,
-    "latency_ms_mean": 1.9,
-    "latency_ms_p50": 1.8,
-    "latency_ms_max": 2.2,
+    "latency_ms_mean": 3.0,
+    "latency_ms_p50": 3.0,
+    "latency_ms_max": 3.4,
     "fallback_reasons": {
       "baseline": 8
     }
@@ -94,20 +94,7 @@
   },
   "verification": {
     "available": false,
-    "model_id": null,
-    "unavailable_reason": "google/gemma-3-4b-it: OSError: You are trying to access a gated repo.\nMake sure to have access to it at https://huggingface.co/google/gemma-3-4b-it.\n401 Client Error. (Request ID: Root=1-6aca2dc0-7d7ae7cd55c4e2d370fcf77c;5ac43e41-2f22-433d-83f7-0721d90dca34)\n\nCannot access gated repo for url https://huggingface.co/google/gemma-3-4b-it/resolve/main/config.json.\nAccess to model google/gemma-3-4b-it is restricted. You must have access to it and be authenticated to access it. Please log in.; google/gemma-3-1b-it: OSError: You are trying to access a gated repo.\nMake sure to have access to it at https://huggingface.co/google/gemma-3-1b-it.\n401 Client Error. (Request ID: Root=1-6aca2dc1-25f337802b8ceea8734cac05;24fd3def-8c48-4e92-a695-1ce85ffbedb1)\n\nCannot access gated repo for url https://huggingface.co/google/gemma-3-1b-it/resolve/main/config.json.\nAccess to model google/gemma-3-1b-it is restricted. You must have access to it and be authenticated to access it. Please log in.",
-    "n_cases": 8,
-    "decidable_cases": 7,
-    "ambiguous_cases_excluded": 1,
-    "accuracy_on_decidable_pct": 0.0,
-    "false_verified_count": 0,
-    "decision_matrix": {
-      "verified->uncertain": 3,
-      "rejected->uncertain": 4,
-      "ambiguous->uncertain": 1
-    },
-    "latency_ms_mean": 0.1,
-    "latency_ms_p95": 0.2
+    "note": "No labelled image set supplied. Pass --cases <path> to measure verification quality."
   },
-  "duration_s": 0.0
+  "duration_s": 0.1
 }
