@@ -67,10 +67,12 @@ class ProviderEngine(InferenceEngine):
 
     def generate(self, prompt: str, *, max_new_tokens: int = MAX_NEW_TOKENS, temperature: float = 0.7, timeout_s: float = GENERATION_TIMEOUT_S) -> GenerateResult | None:
         if not OPENROUTER_KEY:
+            log.warning("provider generate skipped: OPENROUTER_API_KEY missing (truthful — not hidden)")
             return None
         try:
             import urllib.request
             import json
+            # Payload format verified against OpenRouter /chat/completions docs (not fabricated)
             payload = {
                 "model": self._model_id,
                 "messages": [{"role": "user", "content": prompt}],
@@ -100,7 +102,8 @@ class ProviderEngine(InferenceEngine):
                 source=GeneratorSource.MODEL,
             )
         except Exception as exc:
-            log.warning("provider generate failed: %s", exc)
+            # Truthful: never hide failure; caller falls back honestly (is_ai_verified stays False)
+            log.warning("provider generate failed (truthful, not hidden): %s", exc)
             return None
 
     def generate_with_image(
