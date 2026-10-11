@@ -1,11 +1,94 @@
-# SideQuest AI
+# SideQuest AI — Portfolio / Challenge Submission
 
 **A screen-minimal outdoor exploration game.** You tell it how long you have and
 what you like. It gives you one mission. You put the phone down and go outside.
 When you come back, you submit one photo, and it tells you — honestly — whether
 you actually did the thing.
 
-Built for the [Hacktoberfest 2026 Open-Source AI Challenge](https://dev.to/challenges/hacktoberfest-week1-2026-10-05), Week 1: **Touch Grass**.
+> **Portfolio note:** Built for the [Hacktoberfest 2026 Open-Source AI Challenge](https://dev.to/challenges/hacktoberfest-week1-2026-10-05), Week 1 — Touch Grass (deadline Oct 11 2026, 11:59 PM PDT). This repository contains the truthful, verified state: the AI integration is configured server-side (OpenRouter) but live model inference has not been demonstrated; vision verification code exists but accuracy is not measured; health endpoint is truthful. See [Measured results](#measured-results) and [Limitations](#limitations) for what is genuinely verified vs. what is configured but unverified.
+
+**Live demo:** https://sidequest-ai-42m4.onrender.com  
+**Submission article (truthful draft, ready to publish):** [`docs/devto-hacktoberfest-week1.md`](docs/devto-hacktoberfest-week1.md)  
+**Challenge:** https://dev.to/challenges/hacktoberfest-week1-2026-10-05  
+**License:** MIT — see [LICENSE](LICENSE).
+
+---
+
+## What this is (recruiter / portfolio view)
+
+SideQuest AI is a deliberately narrow product — mission → away → evidence → verdict — designed to make the screen budget a hard constraint rather than a feature. The interesting engineering is not the model choice but the architecture that keeps the model honest: a single-site `is_ai_verified` invariant (`verifier.py`), a deterministic safety gate (`safety.py`, 12 rules) that never retries blocked missions, a provider interface (`engine.py`) that can switch between OpenRouter and a local fallback without changing routes, and a truthful health endpoint (`main.py`) that never initializes a heavyweight engine just to report status.
+
+**The project proves:**
+- Truthful AI-state reporting (health endpoint, generation badges, verdict levels).
+- Deterministic fallbacks that never masquerade as model output (`UnavailableEngine` / `UnavailableProvider`).
+- Safety policy outside the model (`_GATE_AUTHORED`; model output treated as untrusted input).
+- Failure-injection testing (4 scenarios; all survive without claiming AI verification).
+- Honest evaluation reporting (`not measured` instead of fabricated zeros; synthetic smoke test clearly labelled).
+
+---
+
+## Portfolio / Recruiter links
+
+| What | Link | Status (truthful) |
+|---|---|---|
+| Live demo (Render free tier) | https://sidequest-ai-42m4.onrender.com | Running; AI configured but not verified live |
+| Source (this repo) | https://github.com/MoAftab-01/SideQuest-AI | Committed; commit `7a9bda3` (truthful annotations preserved) |
+| DEV submission (draft, ready) | [`docs/devto-hacktoberfest-week1.md`](docs/devto-hacktoberfest-week1.md) | Saved; `published: false`; open editor link below |
+| Challenge page | https://dev.to/challenges/hacktoberfest-week1-2026-10-05 | Week 1 — Touch Grass |
+| DEV submission editor (ready to paste) | https://dev.to/new?prefill=---%0Atitle%3A%20SideQuest%20AI%3A%20A%20Game%20That%20Gets%20You%20Off%20the%20Screen%20and%20Into%20the%20World%20%F0%9F%8C%BF%0Apublished%3A%20false%0Atags%3A%20devchallenge%2C%20hf26challenge | Use to publish after review |
+| Evaluation results (verified) | [`eval/results/eval_results.json`](eval/results/eval_results.json) | Deterministic baseline only; model unmeasured (401 gated) |
+
+> **Secret hygiene:** `OPENROUTER_API_KEY` is configured in Render's dashboard (`render.yaml` line 43–44, `sync: false`); it is never in this repo, never in `.env` (excluded from commit), never printed in logs or this document. The key value appears only in the user's Render image (redacted by the UI).
+
+---
+
+## Tech stack (what the recruiter can verify in repo)
+
+- **Backend:** FastAPI + Pydantic + Uvicorn (`backend/app/main.py`). Health endpoint does not build engine (`_engine` reused only when already present). CORS open for demo; no auth layer (single-player JSON store).
+- **AI seam:** `InferenceEngine` ABC (`engine.py`). Two implementations visible: `ProviderEngine` (`provider.py`, OpenRouter `urllib` requests with `Bearer` auth — payload verified against OpenRouter docs, never fabricated) and `UnavailableProvider` / `UnavailableEngine` (deterministic fallback). `build_engine()` selects by env presence.
+- **Safety / policy:** `safety.py` (12 rules: 6 blocking + 6 warnings); `plannr.py` (retry-on-parse, never-retry-on-block); `verifier.py` (`is_ai_verified` at line ~175 only).
+- **Frontend:** Vanilla HTML/CSS/JS, mobile-first dark emerald theme (`web/index.html`, `styles.css`), hero section, responsive layout, `generationBadge` in `app.js`. No build step, no framework bundle.
+- **Deployment:** Render (`render.yaml` — `autoDeploy: true`, free tier, `SIDEQUEST_EAGER_LOAD=0`), Docker (`Dockerfile`), `assets/` static mount guarded to prevent startup crash.
+- **Tests:** `pytest` — 853 passing; runs with `HF_HUB_OFFLINE=1` + `TRANSFORMERS_OFFLINE=1`; no weights, no network, no GPU.
+- **Evaluation:** Synthetic 8-image smoke test (`eval/`) clearly labelled out-of-distribution; accuracy not claimed; `false_verified_count` pinned at 0.
+
+---
+
+## What is genuinely verified vs. configured-but-unverified
+
+| Claim | Verified | Source / Evidence |
+|---|---|---|
+| Deterministic mission generation (30 templates, gate passes, 12,096 constraint combos, zero contradictions) | **Yes** | `tests/test_fallback.py`; `eval/results/` (baseline) |
+| Honesty invariant (`is_ai_verified` only at one site, never by fallback, never by heuristic) | **Yes** | `tests/test_verifier.py`; `verifier.py:175` |
+| Safety gate (12 rules) blocks unsafe missions; retries only parse errors | **Yes** | `tests/test_safety.py`; `tests/test_planner.py` |
+| Failure-injection (4 scenarios: unavailable engine, unparseable output, unsafe output, verification without model) | **Yes** | `tests/test_api.py`; `eval/` harness |
+| Health endpoint truthful (never initializes engine; reports `provider_configured` from env only) | **Yes** | `/api/health` (`main.py:97`) |
+| Frontend hero / navigation / responsive layout | **Yes** | `web/index.html`, `styles.css`, `app.js`; visible at demo URL |
+| OpenRouter provider configured server-side (`OPENROUTER_API_KEY` set, `sync: false`) | **Yes** (env config) | Render dashboard image; `render.yaml`; `provider.py` |
+| OpenRouter live inference (real latency / output / vision accuracy) | **No** | Not demonstrated; rate limits / redeploy / 401 on local weights may block; health reports truthfully |
+| Vision verification accuracy on real photographs | **No** | Synthetic smoke test only; ambiguous case held out |
+| Local Gemma 3 4B inference (weights loaded, interactive speed) | **No** | Weights gated (401 with fresh `HF_TOKEN`); `SIDEQUEST_EAGER_LOAD=0` keeps cool starts fast |
+
+---
+
+## How to run (portfolio / recruiter quick-check)
+
+```bash
+git clone https://github.com/MoAftab-01/SideQuest-AI.git
+cd SideQuest-AI
+python -m venny .venv  # or python -m venv .venv
+pip install -e ".[dev]"
+# Start (deterministic mode — works immediately, no key needed):
+uvicorn app.main:app --reload --app-dir backend
+# Or with OpenRouter (requires your own key in env, never committed):
+export OPENROUTER_API_KEY="sk-or-v1-..."
+uvicorn app.main:app --reload --app-dir backend
+```
+
+Run tests (no GPU, no weights, fast):
+```bash
+python -m pytest -q
+```
 
 ---
 
