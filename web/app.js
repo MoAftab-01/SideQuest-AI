@@ -1248,7 +1248,11 @@
     // duplicating navigation bars or breaking active states
     function syncScreenFromHash() {
       var h = location.hash.replace('#', '').trim();
-      if (!h) return;
+      if (!h) {
+        // Load on / (home) shows setup — never sticky on other screen
+        if (current !== 'setup') show('setup');
+        return;
+      }
       if (SCREENS.indexOf(h) !== -1 && h !== current) {
         try { show(h); } catch (e) { /* ignore */ }
         // Preserve session on refresh so saved XP / journal entries stay intact
