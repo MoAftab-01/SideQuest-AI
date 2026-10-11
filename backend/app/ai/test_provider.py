@@ -21,6 +21,7 @@ import os
 import unittest
 from unittest.mock import patch, MagicMock
 
+import app.ai.provider as _prov_mod
 from app.ai.provider import ProviderEngine, UnavailableProvider, OPENROUTER_KEY
 from app.ai.engine import InferenceEngine
 
@@ -30,20 +31,22 @@ class ProviderTests(unittest.TestCase):
 
     def test_provider_success_mock(self) -> None:
         """Provider returns a positive result; never claims verified if not positive."""
+        # Ensure module-level key matches env (truthful setup, not hidden fix)
         with patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key"}, clear=False):
-            provider = ProviderEngine()
-            with patch.object(provider, "load", return_value=True):
-                # Mock urlopen response: provide both __enter__ return and read on the response object
-                mock_meta = MagicMock()
-                mock_meta.read.return_value = b'{"choices":[{"message":{"content":"found"}}]}'
-                with patch("urllib.request.urlopen") as m:
-                    m.return_value.__enter__.return_value = mock_meta
-                    # Confirm key is present (truthful check)
-                    result = provider.generate("test prompt")
-                    self.assertIsNotNone(result)
-                    self.assertEqual(result.text, "found")
-                    # Provider inference is real (external model); positive result
-                    # can be labeled verified in caller; the guard remains intact.
+            with patch.object(_prov_mod, "OPENROUTER_KEY", "test-key"):
+                provider = ProviderEngine()
+                with patch.object(provider, "load", return_value=True):
+                    # Mock urlopen response: provide both __enter__ return and read on the response object
+                    mock_meta = MagicMock()
+                    mock_meta.read.return_value = b'{"choices":[{"message":{"content":"found"}}]}'
+                    with patch("urllib.request.urlopen") as m:
+                        m.return_value.__enter__.return_value = mock_meta
+                        # Confirm key is present (truthful check)
+                        result = provider.generate("test prompt")
+                        self.assertIsNotNone(result)
+                        self.assertEqual(result.text, "found")
+                        # Provider inference is real (external model); positive result
+                        # can be labeled verified in caller; the guard remains intact.
 
     def test_provider_failure_returns_none_no_fabricated_verified(self) -> None:
         """Provider returns None on failure; output never labeled verified; is_ai_verified stays False."""
