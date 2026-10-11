@@ -24,10 +24,11 @@
 <!-- ============================== top bar ============================== -->
 <header class="appbar" id="appbar">
   <div class="appbar-in">
-    <span class="brand" aria-hidden="true">
-      <svg viewBox="0 0 64 64" width="22" height="22" focusable="false"><path d="M32 52V30" stroke="currentColor" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M32 32c0-9 6-15 14-15 0 9-6 15-14 15z" fill="currentColor"/><path d="M32 41c0-7-5-12-12-12 0 7 5 12 12 12z" fill="currentColor" opacity=".55"/></svg>
-    </span>
-    <span class="brand-txt">SideQuest</span>
+    <a href="#" class="brand" id="btn-home" aria-label="SideQuest home" onclick="event.preventDefault(); if(typeof show==='function'){show('setup');}document.body.dataset.screen='setup';window.scrollTo(0,0);return false;">
+      <svg viewBox="0 0 64 64" width="22" height="22" focusable="false" aria-hidden="true"><path d="M32 52V30" stroke="currentColor" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M32 32c0-9 6-15 14-15 0 9-6 15-14 15z" fill="currentColor"/><path d="M32 41c0-7-5-12-12-12 0 7 5 12 12 12z" fill="currentColor" opacity=".55"/></svg>
+      <span class="brand-txt">SideQuest</span>
+      <span class="sr-only">Home</span>
+    </a>
     <button type="button" class="ghost-btn tiny" id="btn-about" aria-haspopup="dialog">
       <span aria-hidden="true">i</span><span class="sr-only">About this app and the model it uses</span>
     </button>

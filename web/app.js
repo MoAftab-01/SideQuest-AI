@@ -1221,6 +1221,44 @@
     $('btn-about').addEventListener('click', openAbout);
     $('btn-about-2').addEventListener('click', openAbout);
     $('btn-about-close').addEventListener('click', closeAbout);
+    // Home navigation: header logo/link and keyboard
+    var btnHome = $('btn-home');
+    if (btnHome) {
+      btnHome.addEventListener('click', function (e) {
+        if (e) e.preventDefault();
+        show('setup');
+        document.body.dataset.screen = 'setup';
+        window.scrollTo(0, 0);
+        announce('Returned to home.');
+      });
+    }
+    document.addEventListener('keydown', function (e) {
+      // Escape closes about sheet; Alt+H returns home from any screen (accessible)
+      if (e.key === 'Escape' && !$('about-wrap').hidden) closeAbout();
+      if (e.altKey && e.key === 'h') {
+        e.preventDefault();
+        show('setup');
+        document.body.dataset.screen = 'setup';
+        window.scrollTo(0, 0);
+        announce('Returned to home.');
+      }
+    });
+
+    // Browser Back support for nested screen URLs (hash persistence) without
+    // duplicating navigation bars or breaking active states
+    function syncScreenFromHash() {
+      var h = location.hash.replace('#', '').trim();
+      if (!h) return;
+      if (SCREENS.indexOf(h) !== -1 && h !== current) {
+        try { show(h); } catch (e) { /* ignore */ }
+        // Preserve session on refresh so saved XP / journal entries stay intact
+      }
+    }
+    window.addEventListener('popstate', syncScreenFromHash);
+    window.addEventListener('hashchange', syncScreenFromHash);
+    // On initial load, respect a hash that points to a valid screen
+    syncScreenFromHash();
+    // about sheet (continued — no duplicate listeners)
     $('about-scrim').addEventListener('click', closeAbout);
 
     // error bar
@@ -1229,11 +1267,6 @@
       var fn = lastRetry;
       hideError();
       if (fn) fn();
-    });
-
-    // keyboard: Escape closes the sheet
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && !$('about-wrap').hidden) closeAbout();
     });
 
     // keep the elapsed field honest if the return screen is left open a while

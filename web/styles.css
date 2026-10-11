@@ -123,10 +123,19 @@ button, input, select, textarea { font: inherit; color: inherit; }
   display: flex; align-items: center; gap: 10px;
   pointer-events: auto;
 }
-.brand { color: var(--grass); display: flex; }
+.brand { color: var(--grass); display: flex; align-items: center; gap: 10px; text-decoration: none; }
 .brand-txt {
   font-weight: 750; letter-spacing: -.02em; font-size: 17px;
 }
+.brand:hover .brand-txt { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--grass-deep); }
+/* Consistent, accessible Home navigation action (not a duplicate bar) */
+.home-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--fg-2); text-decoration: none; font-weight: 650; font-size: 14px;
+  padding: 6px 0; border-radius: 6px; transition: color .12s;
+}
+.home-link:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--grass); }
+.home-link:focus-visible { outline: 3px solid var(--grass); outline-offset: 2px; }
 #btn-about { margin-left: auto; }
 
 /* hide the bar on the anti-screen screen: nothing but the clock */
