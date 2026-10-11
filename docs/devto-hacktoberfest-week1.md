@@ -31,12 +31,12 @@ Implemented features (verified from repo, not claimed as live-AI-tested):
 
 Live site: https://sidequest-ai-42m4.onrender.com
 
-Status as of 2026-10-11 (truthful — not claimed as verified live):
-- `/api/health` returns `200`; reports `provider_configured: true` (OpenRouter env configured), `model_configured: true`, and truthfully notes that no local engine is loaded (free tier / CPU / gated-repo constraints).
+Status as of 2026-10-11 (truthful — updated 2026-10-12 with local verification):
+- `/api/health` returns `200` (verified locally with `TestClient`); reports `provider_configured: true`, `provider_credentials_present: true`, `model_configured: true`, `provider_connectivity_tested: false`, `model_successfully_generated: false`, `vision_model_available: false`, `model_is_local: false`. The endpoint never initializes `get_engine()`; only reuses existing `_engine` when present. Truthful.
 - Front page: hero section, navigation (home/hash links preserved), mobile-first CSS.
-- AI generation: configured through `provider.py` using OpenRouter (`google/gemma-3-4b-it` target model). Actual live inference depends on Render redeploy + OpenRouter rate limits; not demonstrated here.
-- Vision verification: code implemented (`generate_with_image` with base64 data URL), but vision accuracy is **not measured** on real photographs (synthetic smoke test only).
-- Fallback is clearly labelled in the UI (`generationBadge`) — never masked as model output.
+- AI generation: `provider.py` (OpenRouter `urllib` POST to `/chat/completions`; `generate_with_image` for vision). Configured via `.env` (local) and Render dashboard (deployed). Value never shown in any file or log; `sync: false` in `render.yaml`. Not verified live (rate limits / redeploy / no engine load triggered locally by design).
+- Vision verification: code implemented; accuracy **not measured**.
+- Fallback clearly labeled (`UnavailableProvider`; UI `generationBadge`).
 
 No fabricated user testing, no invented accuracy metrics, no claimed live model results.
 
