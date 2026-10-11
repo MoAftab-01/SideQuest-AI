@@ -37,6 +37,12 @@ from app.models.schemas import (
 )
 from app.store import award, get_or_create, level_for_xp, save, xp_for_level
 
+import os
+import sys
+
+# Ensure `from app.models.schemas` resolves from /app/backend (the Docker WORKDIR layout).
+sys.path.insert(0, "/app/backend")
+
 log = logging.getLogger(__name__)
 
 #: Where the built front end lands. Absent in dev, present in the container.
