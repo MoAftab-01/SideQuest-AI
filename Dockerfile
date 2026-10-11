@@ -11,6 +11,11 @@
 
 FROM python:3.11-slim
 
+# Cache-bust marker: forces Render to rebuild from scratch so PYTHONPATH env
+# (needed for `from app.models.schemas import ...`) is not served from a
+# cached layer that predates the fix. Bump this comment on each redeploy.
+# BUILD-CACHE-BUST-2026-10-11
+
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
