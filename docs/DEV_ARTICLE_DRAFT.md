@@ -1,3 +1,5 @@
+# DEV article — verified with REAL deploy (https://sidequest-ai-42m4.onrender.com/), /api/health = 200, model loaded = FALSE (403 gated repo truthful), vision NOT measured
+
 # DEV submission article — DRAFT, not published
 
 **Status: not submitted. Not published. Do not publish until the checks in
