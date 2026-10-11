@@ -5,7 +5,6 @@
 *.pt
 .cache/
 huggingface/
-models/
 .cache/huggingface/
 
 # Credentials — never commit these
