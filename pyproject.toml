@@ -13,7 +13,7 @@ dependencies = [
     "python-multipart>=0.0.9",
     "pillow>=10.0",
     "numpy>=1.26",
-    "transformers>=4.50",
+    "transformers==4.57.1",
     "torch>=2.4",
     "accelerate>=0.30",
     "safetensors>=0.4",

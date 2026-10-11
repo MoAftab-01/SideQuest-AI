@@ -42,7 +42,7 @@ COPY eval ./eval
 COPY scripts ./scripts
 
 RUN pip install --no-deps -e . \
- && pip install fastapi "uvicorn[standard]" pydantic python-multipart pillow numpy transformers accelerate safetensors sentencepiece
+ && pip install fastapi "uvicorn[standard]" pydantic python-multipart pillow numpy "transformers==4.57.1" accelerate safetensors sentencepiece
 
 # Player progress is written here. On Render this is an ephemeral filesystem:
 # progress persists for the life of the instance and is lost on redeploy.
