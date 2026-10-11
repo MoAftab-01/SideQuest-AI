@@ -38,7 +38,10 @@ services:
       - key: SIDEQUEST_EAGER_LOAD
         value: "0"
 
-      # Secret. Set in the dashboard, never committed.
+      # Secret. Set in the Render dashboard; never committed.
+      # Free-tier OpenRouter external inference (verified: text + vision; $0 limited use; rate limited; no SLA).
+      - key: OPENROUTER_API_KEY
+        sync: false
       # Left unset here so the blueprint stays publishable.
       - key: HF_TOKEN
         sync: false

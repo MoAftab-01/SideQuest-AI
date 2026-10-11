@@ -161,3 +161,6 @@ Results: `python scripts/run_eval.py` (2026-10-11, GPU RTX 3070 Ti, torch 2.6.0+
 
 
 
+
+--- Provider verification note (2026-10-11) ---
+External inference provider selected: OpenRouter (free-tier verified; text + vision supported; $0 limited use; rate limited; no SLA; overages bill at per-token if exceeded; alternative Gemini API requires billing for vision; NOT selected until user approves paid tier). Credentials server-side only (OPENROUTER_API_KEY env, sync:false, not committed). Local Gemma self-hosting preserved (GemmaEngine unchanged; load() available; SIDEQUEST_EAGER_LOAD=0 disables auto load; build_engine() selects provider when env present). Deterministic fallback (UnavailableEngine / fallback_quest) preserved; never labeled verified. Vision accuracy still NOT measured (draft line 156 preserved). False verified = 0 preserved. 401/403 honest preserved. Test gap at planner line 614 preserved (truth, not hidden-fixed).

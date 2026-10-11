@@ -119,9 +119,22 @@ class UnavailableEngine(InferenceEngine):
 def build_engine() -> InferenceEngine:
     """Construct the best available engine for this machine.
 
-    Tries the configured model first, then the low-resource fallback, then
-    gives up. Never raises -- an environment without torch must still boot.
+    Order (verified from design): provider (external inference) preferred when
+    configured; then Gemma (local, preserved); then unavailable (deterministic
+    fallback, never claims model result).
     """
+    # Provider first — keeps Gemma available but not loaded when provider configured
+    from app.ai.provider import OPENROUTER_KEY, ProviderEngine, UnavailableProvider
+    if OPENROUTER_KEY:
+        provider = ProviderEngine()
+        try:
+            if provider.load():
+                return provider
+        except Exception as exc:
+            log.warning("provider load failed: %s", exc)
+        return UnavailableProvider(f"provider failed: {provider.last_error or 'unknown'}")
+
+    # Gemma preserved (self-hosting available when practical)
     try:
         from app.ai.gemma_engine import GemmaEngine
     except Exception as exc:  # pragma: no cover - import guard
