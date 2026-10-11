@@ -96,17 +96,38 @@ app.add_middleware(
 
 @app.get("/api/health")
 def health() -> dict:
-    """What is actually running. Never overstates capability."""
-    engine = get_engine()
-    return {
+    """What is actually running. Never overstates capability.
+    Does not initialize a heavyweight model just to report status."""
+    # Read env credentials directly; never trigger get_engine() here.
+    openrouter_key_present = bool(os.environ.get("OPENROUTER_API_KEY"))
+    model_configured = bool(os.environ.get("SIDEQUEST_MODEL_ID")) or bool(os.environ.get("SIDEQUEST_FALLBACK_MODEL_ID"))
+    provider_available = openrouter_key_present
+    # Only load a lightweight status check, never the full model engine.
+    status_summary = {
         "status": "ok",
-        "engine": engine.status().model_dump(),
-        "model_is_local": True,
-        "note": (
-            "Mission generation degrades to a deterministic generator when no "
-            "model is loaded. See /api/eval/baseline for the comparison."
-        ),
+        "api_running": True,
+        "provider_configured": provider_available,
+        "provider_credentials_present": openrouter_key_present,
+        "model_configured": model_configured,
+        "provider_connectivity_tested": False,
+        "model_successfully_generated": False,
+        "vision_model_available": False,
+        "model_is_local": False,
+        "note": "Health reports actual state; generation requires valid OPENROUTER_API_KEY or loaded model. See /api/eval/baseline for comparison.",
     }
+    # If an engine was already built, reuse its honest status; never build new.
+    installed = _engine
+    if installed is not None:
+        s = installed.status()
+        status_summary["model_is_local"] = s.device not in ("none", None)
+        status_summary["engine"] = s.model_dump()
+        # Truthful: only claim model-generated when engine actually produced one.
+        status_summary["model_successfully_generated"] = False  # health is never a generation
+        if s.loaded:
+            status_summary["provider_connectivity_tested"] = True
+        return status_summary
+    # No installed engine: report from env only (lightweight, no get_engine()).
+    return status_summary
 
 
 # ---------------------------------------------------------------------------

@@ -878,4 +878,4 @@ body[data-away="gone"] .away-kicker { color: var(--grass); }
   body { height: auto; overflow: visible; }
   .appbar, .cta-dock, .err-bar { display: none !important; }
   .screen[hidden] { display: none !important; }
-}
+}.hero { text-align:center; padding: 3rem 1.5rem 1.5rem; max-width: 640px; margin: 0 auto; } .hero-h1 { font-size: clamp(2.2rem, 8vw, 3.6rem); line-height: 1.05; letter-spacing: -0.03em; color: var(--fg); margin: 0 0 .6rem; } .hero-sub { font-size: 1.05rem; color: var(--fg-2); margin: 0 0 1.6rem; line-height: 1.45; }

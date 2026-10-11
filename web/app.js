@@ -1249,13 +1249,14 @@
     function syncScreenFromHash() {
       var h = location.hash.replace('#', '').trim();
       if (!h) {
-        // Load on / (home) shows setup — never sticky on other screen
+        // Load on / always shows setup so users are never stuck on another screen
         if (current !== 'setup') show('setup');
         return;
       }
+      // Only navigate to a known screen when the hash matches; do not jump
+      // unexpectedly if the user is already mid-flow.
       if (SCREENS.indexOf(h) !== -1 && h !== current) {
         try { show(h); } catch (e) { /* ignore */ }
-        // Preserve session on refresh so saved XP / journal entries stay intact
       }
     }
     window.addEventListener('popstate', syncScreenFromHash);
