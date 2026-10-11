@@ -22,8 +22,8 @@ Two promises are pinned here.
 `check_request_feasibility`` is covered against the constraints the player
 actually selects (time budget, mobility, party, weather, energy). Everything
 runs in-process with no weights and no network: ``safety.py`` imports only
-``re`` and the pydantic schemas, so this module never pulls in torch or
-transformers and finishes in well under a second.
+``re`` and the pydantic schemas, so this module never calls an inference
+provider and finishes in well under a second.
 """
 
 from __future__ import annotations

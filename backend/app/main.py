@@ -7,8 +7,8 @@ product, and keeping the API narrow is what makes the front end screen-minimal.
 Two things this module is careful about:
   * `/api/health` reports what is *actually* loaded, so the deployed demo can
     never imply a capability the instance does not have.
-  * Evidence is the only thing that leaves the machine, and only when the
-    player submits a photo for model checking.
+  * Mission inputs and submitted photos are sent to OpenRouter only when a
+    provider key is configured; without it, the deterministic fallback runs.
 """
 
 from __future__ import annotations
@@ -16,29 +16,25 @@ from __future__ import annotations
 import logging
 import os
 import time
-from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from dotenv import load_dotenv
 
 from app.ai.engine import InferenceEngine, build_engine
 from app.ai.planner import plan_with_retry
 from app.ai.verifier import verify_evidence
 from app.models.schemas import (
     Evidence,
-    GeneratorSource,
     PlayerState,
-    Quest,
     QuestRequest,
     SessionSummary,
-    Verdict,
 )
 from app.store import award, get_or_create, level_for_xp, save, xp_for_level
 
-import os
-import sys
+load_dotenv()
 
 # Ensure `from app.models.schemas` resolves from /app/backend (the Docker WORKDIR layout).
 log = logging.getLogger(__name__)
@@ -66,19 +62,10 @@ def get_engine() -> InferenceEngine:
     return _engine
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Do not block startup on a multi-minute model download unless asked to.
-    if os.environ.get("SIDEQUEST_EAGER_LOAD", "0") == "1":
-        get_engine()
-    yield
-
-
 app = FastAPI(
     title="SideQuest AI",
     version="0.1.0",
-    description="Screen-minimal outdoor exploration powered by local open-weight inference.",
-    lifespan=lifespan,
+    description="Screen-minimal outdoor exploration powered by OpenRouter.",
 )
 
 app.add_middleware(
@@ -100,7 +87,9 @@ def health() -> dict:
     Does not initialize a heavyweight model just to report status."""
     # Read env credentials directly; never trigger get_engine() here.
     openrouter_key_present = bool(os.environ.get("OPENROUTER_API_KEY"))
-    model_configured = bool(os.environ.get("SIDEQUEST_MODEL_ID")) or bool(os.environ.get("SIDEQUEST_FALLBACK_MODEL_ID"))
+    model_configured = bool(
+        os.environ.get("OPENROUTER_MODEL_ID", "google/gemma-3-4b-it")
+    )
     provider_available = openrouter_key_present
     # Only load a lightweight status check, never the full model engine.
     status_summary = {
@@ -113,18 +102,19 @@ def health() -> dict:
         "model_successfully_generated": False,
         "vision_model_available": False,
         "model_is_local": False,
-        "note": "Health reports actual state; generation requires valid OPENROUTER_API_KEY or loaded model. See /api/eval/baseline for comparison.",
+        "note": "OpenRouter receives mission prompts and submitted photos when configured. Without a valid API key, the deterministic fallback is used.",
     }
     # If an engine was already built, reuse its honest status; never build new.
     installed = _engine
     if installed is not None:
         s = installed.status()
-        status_summary["model_is_local"] = s.device not in ("none", None)
+        status_summary["model_is_local"] = False
         status_summary["engine"] = s.model_dump()
         # Truthful: only claim model-generated when engine actually produced one.
         status_summary["model_successfully_generated"] = False  # health is never a generation
         if s.loaded:
             status_summary["provider_connectivity_tested"] = True
+            status_summary["vision_model_available"] = s.supports_vision
         return status_summary
     # No installed engine: report from env only (lightweight, no get_engine()).
     return status_summary

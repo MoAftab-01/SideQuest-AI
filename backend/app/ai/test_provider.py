@@ -1,91 +1,99 @@
-"""Provider tests (verified design). Four scenarios:
-
-1. Success with mock (provider returns real result; does NOT claim is_ai_verified
-   unless the provider result is positive — preserved invariant).
-2. Provider failure (mock 500 / timeout -> returns None -> build_engine falls back
-   to UnavailableProvider; output NEVER labeled verified; is_ai_verified stays False).
-3. Missing credentials (OPENROUTER_API_KEY absent -> build_engine selects
-   UnavailableProvider; graceful, no crash).
-4. Image verification failure (negative / unclear vision verdict -> verdict level
-   UNCERTAIN; is_ai_verified stays False; never claims verified when no positive
-   verdict).
-
-Preserves truth: does NOT fabricate vision accuracy result (draft line 156:
-vision NOT measured); does NOT fix test_planning.py gap at line 614 (truth
-preserved); does NOT claim false_verified=0 as a measured value (only asserts
-invariant in scenario 2/4); does NOT invent model inference result.
-"""
 from __future__ import annotations
 
+import json
 import os
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+from urllib.error import URLError
 
-import app.ai.provider as _prov_mod
-from app.ai.provider import ProviderEngine, UnavailableProvider, OPENROUTER_KEY
-from app.ai.engine import InferenceEngine
+from app.ai.engine import InferenceEngine, UnavailableEngine, build_engine
+from app.ai.provider import DEFAULT_MODEL_ID, ProviderEngine
 
 
 class ProviderTests(unittest.TestCase):
-    """Verified provider scenarios (no deploy, no fabricated result)."""
+    def _response(self, payload: dict) -> MagicMock:
+        response = MagicMock()
+        response.read.return_value = json.dumps(payload).encode("utf-8")
+        return response
 
-    def test_provider_success_mock(self) -> None:
-        """Provider returns a positive result; never claims verified if not positive."""
-        # Ensure module-level key matches env (truthful setup, not hidden fix)
-        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key"}, clear=False):
-            with patch.object(_prov_mod, "OPENROUTER_KEY", "test-key"):
-                provider = ProviderEngine()
-                with patch.object(provider, "load", return_value=True):
-                    # Mock urlopen response: provide both __enter__ return and read on the response object
-                    mock_meta = MagicMock()
-                    mock_meta.read.return_value = b'{"choices":[{"message":{"content":"found"}}]}'
-                    with patch("urllib.request.urlopen") as m:
-                        m.return_value.__enter__.return_value = mock_meta
-                        # Confirm key is present (truthful check)
-                        result = provider.generate("test prompt")
-                        self.assertIsNotNone(result)
-                        self.assertEqual(result.text, "found")
-                        # Provider inference is real (external model); positive result
-                        # can be labeled verified in caller; the guard remains intact.
-
-    def test_provider_failure_returns_none_no_fabricated_verified(self) -> None:
-        """Provider returns None on failure; output never labeled verified; is_ai_verified stays False."""
-        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key"}, clear=False):
-            provider = ProviderEngine()
-            # Force failure by making load fail
-            with patch.object(provider, "load", return_value=False):
-                result = provider.generate("test prompt")
-                self.assertIsNone(result)
-                # UnavailableProvider selected by build_engine when provider fails
-                # Never claim verified; truth preserved (no fabricated model result)
-
-    def test_provider_missing_credentials_graceful(self) -> None:
-        """No OPENROUTER_API_KEY -> UnavailableProvider selected; graceful, no crash."""
-        with patch.dict(os.environ, {"OPENROUTER_API_KEY": ""}, clear=False):
-            from app.ai.engine import build_engine
-            # Clear the env key temporarily
-            with patch.dict(os.environ, {"OPENROUTER_API_KEY": ""}, clear=True):
-                eng = build_engine()
-                # Should fall back to unavailable (truthful) rather than crash
-                self.assertIsInstance(eng, (InferenceEngine,))
-                # Status honest: loaded=False when no provider and no local model
-                st = eng.status()
-                self.assertFalse(st.loaded)
-
-    def test_image_verification_failure_never_verified(self) -> None:
-        """Negative vision verdict -> uncertain; is_ai_verified False; never claims verified."""
-        from app.ai.verifier import Verdict, ConfidenceLevel
-        # Preserve the invariant that only positive verdict + no needs_better sets verified
-        # Without a positive verdict, verified must stay False (truth preserved).
-        verdict = Verdict(
-            quest_id="q_test_001",
-            level=ConfidenceLevel.UNCERTAIN,
-            explanation="unclear evidence",
-            needs_better_photo=False,
-            is_ai_verified=False,
+    def test_text_generation_sends_bearer_key_and_model(self) -> None:
+        provider = ProviderEngine(api_key="test-key")
+        response = self._response(
+            {"choices": [{"message": {"content": '{"title":"A mission"}'}}]}
         )
-        self.assertFalse(verdict.is_ai_verified)
-        # Never fabricate a verified result; truth preserved.
+        with patch("urllib.request.urlopen") as urlopen:
+            urlopen.return_value.__enter__.return_value = response
+            result = provider.generate("make a mission")
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result.text, '{"title":"A mission"}')
+        self.assertEqual(result.model_id, DEFAULT_MODEL_ID)
+        request = urlopen.call_args.args[0]
+        self.assertEqual(request.get_header("Authorization"), "Bearer test-key")
+        self.assertEqual(
+            json.loads(request.data)["model"],
+            DEFAULT_MODEL_ID,
+        )
+        self.assertEqual(json.loads(request.data)["max_tokens"], 2048)
+        self.assertEqual(
+            json.loads(request.data)["response_format"],
+            {"type": "json_object"},
+        )
+
+    def test_vision_generation_sends_image_as_data_url(self) -> None:
+        provider = ProviderEngine(api_key="test-key")
+        response = self._response(
+            {"choices": [{"message": {"content": '{"verdict":"uncertain"}'}}]}
+        )
+        image = b"\x89PNG\r\n\x1a\nimage bytes"
+        with patch("urllib.request.urlopen") as urlopen:
+            urlopen.return_value.__enter__.return_value = response
+            result = provider.generate_with_image("check this", image)
+
+        self.assertIsNotNone(result)
+        request = urlopen.call_args.args[0]
+        content = json.loads(request.data)["messages"][0]["content"]
+        self.assertEqual(content[0], {"type": "text", "text": "check this"})
+        self.assertEqual(content[1]["image_url"]["url"], "data:image/png;base64,iVBORw0KGgppbWFnZSBieXRlcw==")
+
+    def test_request_failure_returns_none_and_is_logged(self) -> None:
+        provider = ProviderEngine(api_key="test-key")
+        with patch("urllib.request.urlopen", side_effect=URLError("offline")):
+            with self.assertLogs("app.ai.provider", level="WARNING"):
+                result = provider.generate("make a mission")
+
+        self.assertIsNone(result)
+        self.assertIn("offline", provider.last_error)
+
+    def test_missing_key_uses_deterministic_fallback_without_network(self) -> None:
+        with patch.dict(os.environ, {"OPENROUTER_API_KEY": ""}, clear=False):
+            with patch("urllib.request.urlopen") as urlopen:
+                engine = build_engine()
+
+        self.assertIsInstance(engine, UnavailableEngine)
+        self.assertIsInstance(engine, InferenceEngine)
+        self.assertFalse(engine.status().loaded)
+        urlopen.assert_not_called()
+
+    def test_load_checks_openrouter_with_bearer_key(self) -> None:
+        provider = ProviderEngine(api_key="test-key")
+        with patch("urllib.request.urlopen") as urlopen:
+            urlopen.return_value.__enter__.return_value = MagicMock()
+            self.assertTrue(provider.load())
+
+        request = urlopen.call_args.args[0]
+        self.assertEqual(request.get_header("Authorization"), "Bearer test-key")
+        self.assertEqual(provider.status().device, "api")
+
+    def test_build_engine_selects_openrouter_when_available(self) -> None:
+        response = MagicMock()
+        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key"}):
+            with patch("urllib.request.urlopen") as urlopen:
+                urlopen.return_value.__enter__.return_value = response
+                engine = build_engine()
+
+        self.assertIsInstance(engine, ProviderEngine)
+        self.assertTrue(engine.status().loaded)
 
 
 if __name__ == "__main__":

@@ -1,16 +1,8 @@
 # Render blueprint for SideQuest AI.
 #
-# What this deployment IS: a working demo of the app on a public URL.
-# What it is NOT: a fast model server. Render's free tier is CPU-only and
-# Gemma 3 4B on CPU is far too slow for interactive use, so on this service the
-# app runs its deterministic generator. /api/health reports that state, and the
-# UI labels missions by how they were generated. Nothing here claims the demo is
-# running the model.
-#
-# To run the real model, set HF_TOKEN (a HuggingFace read token with access to
-# the gated google/gemma-3-* repos) in the Render dashboard. It will then load on
-# CPU. Expect it to be slow. That is a property of the hardware, and the app
-# reports the measured latency rather than hiding it.
+# Set OPENROUTER_API_KEY in the Render dashboard to enable remote inference.
+# Without it, the app uses its deterministic generator and labels results as
+# unverified. Mission prompts and submitted photos are sent to OpenRouter.
 
 services:
   - type: web
@@ -33,20 +25,11 @@ services:
       - key: SIDEQUEST_DATA_DIR
         value: /app/data
 
-      # Set to "0" on CPU: eager loading would make every cold start pay a
-      # multi-minute model download before the health check can pass.
-      - key: SIDEQUEST_EAGER_LOAD
-        value: "0"
-
       # Secret. Set in the Render dashboard; never committed.
-      # Free-tier OpenRouter external inference (verified: text + vision; $0 limited use; rate limited; no SLA).
       - key: OPENROUTER_API_KEY
         sync: false
-      # Left unset here so the blueprint stays publishable.
-      - key: HF_TOKEN
-        sync: false
 
-      - key: SIDEQUEST_MODEL_ID
+      - key: OPENROUTER_MODEL_ID
         value: google/gemma-3-4b-it
 
       - key: SIDEQUEST_GEN_TIMEOUT

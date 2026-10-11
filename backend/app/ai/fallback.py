@@ -4,7 +4,7 @@ Why this module exists
 ----------------------
 Two jobs, and both matter for honesty:
 
-1. **Baseline.** The open-weight model is measured against this library. A weak
+1. **Baseline.** The configured model is measured against this library. A weak
    deterministic generator would make the model look good by comparison, which
    is exactly the kind of flattering baseline a results table should not have.
    So the library below is curated, varied and genuinely playable.
@@ -37,7 +37,7 @@ no vision model ran). That is the whole point: a hardcoded rule must never be
 dressed up as a model judgement.
 
 No heavy imports. This module must import in milliseconds on a machine with no
-torch installed, so it depends only on the stdlib, pydantic-backed schemas and
+external inference installed, so it depends only on the stdlib, pydantic-backed schemas and
 the deterministic safety gate.
 """
 

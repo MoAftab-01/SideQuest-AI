@@ -88,21 +88,29 @@ python -m pytest -q
 The suite runs with **no weights, no network, and no GPU**, in a couple of
 seconds.
 
-### Running with the real model
+### Running with OpenRouter
 
-The open-weight model is optional and off by default.
+Set an OpenRouter API key before starting the server to enable model generation
+and photo verification:
 
 ```bash
-pip install torch --index-url https://download.pytorch.org/whl/cpu   # or the CUDA index
-export HF_TOKEN=hf_...            # a read token with access to the gated Gemma repos
+export OPENROUTER_API_KEY=your_openrouter_key
 uvicorn app.main:app --reload --app-dir backend
 ```
 
-> **`google/gemma-3-4b-it` and `google/gemma-3-1b-it` are gated.** You must
-> accept Google's Gemma licence while signed in to HuggingFace, and supply a
-> token with `Read` scope. Without one, the model load returns HTTP 401 and the
-> app falls back to the deterministic generator — visibly, via `/api/health`,
-> and in the UI's own generation badge. It never pretends a model ran.
+PowerShell:
+
+```powershell
+$env:OPENROUTER_API_KEY = "your_openrouter_key"
+uvicorn app.main:app --reload --app-dir backend
+```
+
+The default model is `google/gemma-3-4b-it`; set `OPENROUTER_MODEL_ID` to
+another OpenRouter model that supports vision if you change it. Mission
+preferences, free-text notes, and prompts are sent to OpenRouter when generating
+a mission. A submitted photo is sent for analysis only when the player submits
+it. Without a valid key, the app uses its deterministic fallback and never
+labels the result as model-generated or AI-verified.
 
 Configuration is documented in [`.env.example`](.env.example). Every variable is
 optional.
@@ -112,17 +120,16 @@ optional.
 ## How it works
 
 ```
-   form input ──▶ /api/quest ──▶ plan_with_retry ──┬─▶ GemmaEngine ──▶ parse ──▶ safety gate ──▶ Quest
-                            │                     │        (transformers,    (strict JSON)   (12 rules)
-                            │                     │         local weights)        │
-                            │                     │                              │ fail
-                            │                     └──────────────────────────────┴──▶ fallback_quest
-                            │                                                             (deterministic,
+   form input ──▶ /api/quest ──▶ plan_with_retry ──┬─▶ OpenRouter ──▶ parse ──▶ safety gate ──▶ Quest
+                            │                     │                 (strict JSON)  (12 rules)
+                            │                     │                        │ fail
+                            │                     └────────────────────────┴──▶ fallback_quest
+                            │                                                        (deterministic,
    (screen off) ◀───────────┘                                                              30 templates)
    go outside
         │
         ▼
-   one photo ──▶ /api/verify ──▶ GemmaEngine (vision) ──▶ verdict_from_data ──▶ Verdict
+   one photo ──▶ /api/verify ──▶ OpenRouter (vision) ──▶ verdict_from_data ──▶ Verdict
                                                                      │
                                                                      └─ is_ai_verified set HERE,
                                                                         and only here
@@ -134,7 +141,7 @@ optional.
 | --- | --- | --- |
 | `backend/app/main.py` | 242 | FastAPI surface: `/api/health`, `/api/state`, `/api/quest`, `/api/verify` |
 | `backend/app/ai/engine.py` | 164 | The inference seam. `InferenceEngine` ABC, `UnavailableEngine`, `build_engine` |
-| `backend/app/ai/gemma_engine.py` | 705 | Real local inference: device probing, dtype selection, hard timeouts |
+| `backend/app/ai/provider.py` | — | OpenRouter chat and vision requests |
 | `backend/app/ai/planner.py` | 284 | Mission generation, parse-then-retry (never retries a safety block) |
 | `backend/app/ai/verifier.py` | 286 | Vision verification and the `is_ai_verified` invariant |
 | `backend/app/ai/safety.py` | 327 | 6 blocking + 6 warning rules, plus feasibility checks |
@@ -147,11 +154,10 @@ optional.
 | `tests/` | — | Unit and API tests, all runnable without weights |
 
 **The engine seam is the core design decision.** Every AI call goes through an
-abstract `InferenceEngine`. `GemmaEngine` implements it against local
-transformers; `UnavailableEngine` implements it as "no model, and I am honest
-about that". Because the fallback is *behind the same interface*, the code path
-a user gets with no weights installed is the same code path the tests exercise —
-so "it degrades gracefully" is not an aspiration, it is measured.
+abstract `InferenceEngine`. `ProviderEngine` implements it against OpenRouter;
+`UnavailableEngine` represents a missing or unavailable provider. The
+deterministic fallback stays behind the same interface, so API failures do not
+turn into fake model results.
 
 ### Safety: the model never gets the last word
 
@@ -168,34 +174,37 @@ The harness asserts this by counting engine calls.
 ### Privacy
 
 - Player progress is a JSON file per player on the machine that ran it.
-- Nothing leaves the device except a photo the player explicitly submits for
-  checking.
+- When `OPENROUTER_API_KEY` is configured, mission preferences, optional
+  free-text notes, and prompts are sent to OpenRouter for generation. A photo
+  and its verification prompt are sent only when the player submits evidence.
+- Without a configured key, inference uses the deterministic generator and
+  sends no prompts or photos to OpenRouter.
 - **No GPS.** `Evidence.location_label` is a free-text label the player may
   choose to fill in ("the park"), never coordinates.
 - Photos are held in memory for the length of one request, capped at 8 MB.
 - No analytics, no third-party scripts, no fonts from a CDN.
 
-The one caveat worth stating plainly: on a **deployed** instance, a submitted
-photo is sent to that server and forwarded to the model running there. If that
-instance is hosted by someone else, that is their infrastructure and their
-privacy policy. Self-hosting is the way to keep it local.
+On a **deployed** instance, the server operator can receive the mission request
+and submitted photo, and OpenRouter receives model prompts and submitted photos
+when configured. Review the deployment operator's and
+[OpenRouter's privacy terms](https://openrouter.ai/privacy) before sending
+sensitive details or images.
 
 ---
 
 ## Measured results
 
-> **Status: the model's numbers have not been measured yet.** The Gemma weights
-> are gated and this environment has no HuggingFace token, so every load returns
-> HTTP 401. **No model accuracy, latency, or quality figure is reported below,
-> because none were measured.** Only the deterministic baseline — which genuinely
-> runs with no weights — has numbers.
+> **Status: OpenRouter inference has not been measured yet.** The retained
+> results below predate the provider migration and record only the deterministic
+> baseline plus an unsuccessful local model load. They are historical results,
+> not evidence about the current OpenRouter path.
 >
-> The evaluation harness is finished and runs. What is missing is a token. The
-> moment one is present, `python scripts/run_eval.py --cases eval/data/labeled_cases.json
-> --markdown` produces the model row and this table fills in.
+> With `OPENROUTER_API_KEY` set, `python scripts/run_eval.py --cases
+> eval/data/labeled_cases.json --markdown` evaluates the configured provider.
+> That run sends mission prompts and the labelled photos to OpenRouter.
 
 Rather than leave the section empty, here is what *was* measured, on an
-**RTX 3070 Ti (8 GB), torch 2.6.0+cu124, transformers 4.57.1, Python 3.10**:
+**RTX 3070 Ti Laptop GPU, Python 3.10**:
 
 <!-- RESULTS:BEGIN -->
 > **Status 2026-10-11:** the Gemma weights returned 401 even with a valid HF_TOKEN (gated repo `google/gemma-3-4b-it`). No model inference was demonstrated; only the deterministic baseline produced numbers. All four robustness injections survived. False `AI verified`: 0 (pass). See `eval/results/eval_results.json` for the full record.
@@ -206,7 +215,7 @@ Generated `2026-10-11T03:06:27Z` on **NVIDIA GeForce RTX 3070 Ti Laptop GPU**, t
 
 | Metric | Deterministic baseline (verified) | Gemma (not measured) |
 | --- | --- | --- |
-| Planning engine | deterministic | gemma (401 � gated) |
+| Planning engine | deterministic | gemma (401 � gated) |
 | Missions from model (%) | 0.0 | not measured |
 | Fell back to deterministic (%) | 100.0 | not measured |
 | Safety gate pass (%) | 100.0 (8/8) | not measured |
@@ -214,14 +223,14 @@ Generated `2026-10-11T03:06:27Z` on **NVIDIA GeForce RTX 3070 Ti Laptop GPU**, t
 | Within time budget (%) | 100.0 | not measured |
 | Latency mean / max (ms) | 3.1 / 3.5 | not measured |
 | Diversity (max 1.0) | 0.625 | not measured |
-| Robustness: engine unavailable | yes (claimed: no) | � |
-| Robustness: unparseable model output | yes (claimed: no) | � |
-| Robustness: unsafe model output | yes (claimed: no, blocked by gate) | � |
-| Robustness: verification without model | yes (claimed: no) | � |
+| Robustness: engine unavailable | yes (claimed: no) | � |
+| Robustness: unparseable model output | yes (claimed: no) | � |
+| Robustness: unsafe model output | yes (claimed: no, blocked by gate) | � |
+| Robustness: verification without model | yes (claimed: no) | � |
 
-**What is genuinely verified:** every claim that doesn't need the model � deterministic mission generation (30 templates, all pass gate, 12,096 constraint-combination missions with zero contradictions), the honesty invariant (`is_ai_verified` only at one site), the failure-injection suite (4 scenarios, all survive without claiming AI verification), and the network-disabled mode (`HF_HUB_OFFLINE=1` + `TRANSFORMERS_OFFLINE=1` passes).
+**What is genuinely verified:** every claim that doesn't need the model � deterministic mission generation (30 templates, all pass gate, 12,096 constraint-combination missions with zero contradictions), the honesty invariant (`is_ai_verified` only at one site), the failure-injection suite (4 scenarios, all survive without claiming AI verification), and the network-disabled mode (`HF_HUB_OFFLINE=1` + `TRANSFORMERS_OFFLINE=1` passes).
 
-**What is NOT verified:** vision verification on real images (synthetic set only; ambiguous case held out; accuracy unscored), end-to-end model inference (weights gated � 401 on both `gemma-3-4b-it` and `gemma-3-1b-it`), full offline operation with weights loaded. These are stated explicitly rather than hidden behind zeros.
+**What is NOT verified:** vision verification on real images (synthetic set only; ambiguous case held out; accuracy unscored), end-to-end model inference (weights gated � 401 on both `gemma-3-4b-it` and `gemma-3-1b-it`), full offline operation with weights loaded. These are stated explicitly rather than hidden behind zeros.
 
 <!-- RESULTS:END -->
 
@@ -280,10 +289,8 @@ built so its claims are checkable:
    runs with no network, and
    `test_app_serves_a_full_mission_with_the_network_forcibly_disabled` proves it
    by disabling egress and checking a complete, safety-passed mission still
-   comes back labelled as a fallback. The **model** path is a separate claim
-   this project does not make: weights are fetched once and load locally
-   thereafter, but the first load needs network and end-to-end offline
-   inference with weights present is unverified here.
+   comes back labelled as a fallback. OpenRouter inference requires network
+   access and is not available offline.
 6. **Unmeasured things are reported as unmeasured.** The eval report gates on a
    `measured` flag, not an `available` one, so a missing model produces an
    explicit "not measured" rather than a misleading zero or a silent omission.
@@ -294,36 +301,18 @@ accuracy computes to `0.0%` — which reads as "the model scored zero" rather th
 "nothing was measured". The report now prints *not measured* instead. A metric
 that cannot distinguish "bad result" from "no result" is worse than no metric.
 
-### Open innovation
+### Why OpenRouter
 
-Why open-weight models specifically, and why this matters:
+OpenRouter gives the project one hosted API for both mission generation and
+vision verification, without downloading model weights or requiring users to
+install a GPU stack. The trade-off is explicit: when configured, mission input
+and submitted images leave the device and are handled by OpenRouter and the
+selected model provider. The deterministic fallback still works without a key
+or network, and always reports that no model judged the result.
 
-A vision model small enough to run on a laptop is new in a way that is easy to
-underrate. For most of the last decade, "the app looks at your photo" meant a
-multibillion-dollar API call — an outbound request carrying a user's image to
-someone else's datacenter, metered per call, with a business model that rewards
-maximum engagement with the screen. That is structurally hostile to an app whose
-entire thesis is *less* screen.
-
-Gemma 3 4B changes the shape of that trade. The weights are open, small enough
-to run locally on hardware people already own, and licensed permissively enough
-that a weekend project can build on them. That makes a different category of app
-possible: one where the model is a local component rather than a dependency —
-where the photo never has to go anywhere, and where the interesting engineering
-is the *policy* around the model (what it is allowed to say, what it must never
-claim) rather than the engineering of surviving a metered API.
-
-The deterministic mode of this app does run with the network off, and that is
-tested. **The model path is a different claim and it is not one this project
-makes:** the weights are fetched once and then load locally, but the first load
-needs network, and end-to-end offline operation with the model has not been
-verified here. See [Limitation 4](#limitations).
-
-This is also the honest reason the safety gate sits *after* the model rather than
-inside it. A 4B model's judgement is not trustworthy enough to be the last
-checkpoint on a safety decision, and no amount of prompting fixes that. Putting
-deterministic policy outside the model is the correct architecture for a small
-model, and it is also the part a reader can verify by reading 300 lines.
+The safety gate remains local and deterministic, after model generation. The
+model's output is untrusted input; a model response cannot bypass the policy or
+set `is_ai_verified` unless the verification checks actually passed.
 
 ---
 
@@ -368,15 +357,14 @@ inspection:
 
 ## Deployment
 
-A `render.yaml` blueprint and a CPU-only `Dockerfile` are included.
+A `render.yaml` blueprint and a `Dockerfile` are included.
 
 **What the Render deployment is:** a working public demo of the application.
 
-**What it is not:** a fast model server. Render's free tier has no GPU, and
-Gemma 3 4B on CPU is far too slow for interactive use, so on that service the
-app runs its deterministic generator. Set `HF_TOKEN` and it will load the model
-on CPU — correctly, and slowly. `/api/health` reports the actual state and the
-UI labels each mission by how it was generated.
+Set `OPENROUTER_API_KEY` in the Render dashboard to enable hosted model
+inference. Without it, the deployment uses the deterministic generator.
+`/api/health` reports whether the provider is configured and reachable; the UI
+labels each mission by how it was generated.
 
 Player progress on Render's free tier writes to an ephemeral filesystem: it
 survives for the life of the instance and is lost on redeploy. That is a
@@ -389,10 +377,10 @@ described here rather than glossed over.
 
 This project is MIT licensed — see [LICENSE](LICENSE).
 
-**Model:** [Gemma 3](https://ai.google.dev/gemma) by Google, used under the
-[Gemma Terms of Use](https://ai.google.dev/gemma/terms). Not redistributed here;
-loaded from HuggingFace under the gated-repo licence. With no weights present,
-the project still runs on its own deterministic generator.
+**AI provider:** [OpenRouter](https://openrouter.ai/), which routes requests to
+the configured model. The default is Google's Gemma 3 4B model; model use is
+subject to OpenRouter and the selected model provider's terms. No model weights
+are redistributed here.
 
 **The evaluation images are ours.** `eval/make_cases.py` draws every image in the
 labelled set programmatically with Pillow. No third-party photographs, datasets,
@@ -400,8 +388,7 @@ or scraped assets are used or redistributed anywhere in this repository. That is
 also why the set cannot serve as a perception benchmark — see
 [above](#the-evaluation-set-is-synthetic-and-that-is-stated-up-front).
 
-**Dependencies:** FastAPI, Uvicorn, Pydantic, Pillow, NumPy, PyTorch,
-Transformers, Accelerate, safetensors, SentencePiece — each under its own
+**Dependencies:** FastAPI, Uvicorn, Pydantic, and Pillow — each under its own
 licence. No code was copied from any of them; they are used as published.
 
 **The front end** is vanilla HTML/CSS/JS with no framework and no build step, so
@@ -414,20 +401,16 @@ source and what the browser runs.
 
 Stated plainly, because a limitations section that hedges is worse than none:
 
-1. **No model numbers.** The weights are gated and no token was available, so
-   Gemma's contribution is unmeasured. The code path is implemented and tested
-   against fakes; it has not been demonstrated on real weights here.
+1. **OpenRouter inference has not been measured.** The current provider is tested
+   with mocked API responses; model quality and real API latency have not been
+   measured in this repository.
 2. **The evaluation set is synthetic** and out of distribution for an image
    encoder. It tests the honesty machinery, not perception.
 3. **8 labelled cases is a small set.** Enough to catch a broken pipeline, not
    enough for a statistical claim. The ambiguous case is held out rather than
    scored, which leaves 7 decidable.
-4. **Fully offline operation is unverified.** The deterministic mode runs with
-   no network, and the test suite proves it. The **model** path is not the same
-   claim: weights are fetched from HuggingFace once and load locally
-   thereafter, but the first load needs network and end-to-end offline operation
-   with weights present has not been verified in this environment. Nothing here
-   describes the app as offline-capable. See
+4. **AI inference requires a network connection and an OpenRouter API key.**
+   The deterministic fallback works without either. See
    [point 5 above](#why-this-is-not-overclaiming).
 5. **The safety gate is regex-based.** Twelve keyword rules catch the obvious
    cases and are auditable, but a determined phrasing will get through. It is a
@@ -435,8 +418,6 @@ Stated plainly, because a limitations section that hedges is worse than none:
    tested and read.
 6. **"Screen time saved" is an estimate, not telemetry.** It is outdoor minutes
    multiplied by 60. The app measures no screen usage and does not claim to.
-7. **CPU inference is slow.** GPU inference is what makes the model experience
-   viable; the CPU path is correct but not pleasant.
 
 ## License
 

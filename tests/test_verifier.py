@@ -727,7 +727,7 @@ def test_an_unloaded_engine_gives_an_uncertain_verdict_and_says_why():
     assert outcome.source is GeneratorSource.FALLBACK
     assert outcome.notes == ["engine_unloaded"]
     assert "not checked" in verdict.summary
-    assert "model weights" in verdict.summary
+    assert "OpenRouter" in verdict.summary
 
 
 def test_a_text_only_model_cannot_verify_a_photo():

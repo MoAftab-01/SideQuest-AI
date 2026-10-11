@@ -2,6 +2,10 @@
 
 # DEV submission article â€” DRAFT, not published
 
+> **Archived draft:** this article describes the previous local-Gemma
+> implementation and predates the OpenRouter migration. Do not publish it
+> without rewriting its model, privacy, and evaluation claims.
+
 **Status: not submitted. Not published. Do not publish until the checks in
 "Before submitting" below are done.**
 
@@ -146,7 +150,7 @@ Results: `python scripts/run_eval.py` (2026-10-11, GPU RTX 3070 Ti, torch 2.6.0+
 
 | Metric | Value (verified) |
 | --- | --- |
-| Planning engine used | deterministic (100%) — model 401 |
+| Planning engine used | deterministic (100%) ï¿½ model 401 |
 | Safety gate pass rate | 100.0% (8/8) |
 | Safety gate block count | 0 |
 | Within time budget | 100.0% |
@@ -157,7 +161,7 @@ Results: `python scripts/run_eval.py` (2026-10-11, GPU RTX 3070 Ti, torch 2.6.0+
 
 **What is measured:** 853/853 tests passing; 30-template library, zero contradictions across 12,096 constraint-combination missions; the two `BUG_*` fix regressions (library-poisoning + gate self-block) pinned by 6 new `test_*` functions; the `is_ai_verified` single-site invariant; the `mission_text()` filter (`_GATE_AUTHORED` excludes the gate's own advisories, hazards from templates and models still caught); `_attach_report` deriving `passed` from findings rather than hard-coding `True`.
 
-**What is NOT measured and is stated plainly rather than hidden:** real Gemma 4B inference (401 — gated); vision verification accuracy on real photographs (synthetic Pillow set only); full offline operation with loaded weights (deterministic offline verified; model-first-load needs network, unverified). No fabrication. No zero shown as a result.
+**What is NOT measured and is stated plainly rather than hidden:** real Gemma 4B inference (401 ï¿½ gated); vision verification accuracy on real photographs (synthetic Pillow set only); full offline operation with loaded weights (deterministic offline verified; model-first-load needs network, unverified). No fabrication. No zero shown as a result.
 
 
 

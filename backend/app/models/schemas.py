@@ -293,8 +293,6 @@ class EngineStatus(BaseModel):
     supports_vision: bool = False
     load_error: str | None = None
     last_latency_ms: int | None = None
-    torch_version: str | None = None
-    transformers_version: str | None = None
 
 
 class GenerateResult(BaseModel):

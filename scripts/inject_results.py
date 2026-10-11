@@ -46,29 +46,27 @@ def render(results: dict) -> str:
     v = results.get("verification") or {}
     rb = results.get("robustness") or {}
     env = results.get("environment") or {}
-    probe = env.get("probe") or {}
-
     model_measured = bool(m.get("measured"))
     out: list[str] = [BEGIN, ""]
 
     out += [
         f"Generated `{results.get('generated_at_iso')}` on "
-        f"**{probe.get('gpu_name', 'CPU only')}**, "
-        f"torch `{env.get('torch')}`, transformers `{env.get('transformers')}`, "
+        f"**{env.get('processor') or env.get('platform') or 'unknown hardware'}**, "
         f"Python `{env.get('python')}`, {env.get('ram_gb')} GB RAM.",
         "",
     ]
 
     if not model_measured:
         out += [
-            "> **No model was measured for this run**, so no Gemma figures appear "
-            "below. The Gemma repos are gated on HuggingFace and no token was "
-            "available; every load returned HTTP 401. What follows is the "
-            "deterministic baseline, which genuinely runs with no weights.",
+            "> **No OpenRouter model was measured for this run**, so no model "
+            "figures appear below. What follows is the deterministic baseline.",
             "",
         ]
 
-    out += ["| Metric | Deterministic baseline | Gemma |", "| --- | --- | --- |"]
+    out += [
+        "| Metric | Deterministic baseline | OpenRouter model |",
+        "| --- | --- | --- |",
+    ]
     rows = [
         ("Missions from model (%)", "model_used_pct"),
         ("Fell back to deterministic (%)", "fallback_used_pct"),
@@ -83,8 +81,8 @@ def render(results: dict) -> str:
         ("Latency max (ms)", "latency_ms_max"),
     ]
     for label, key in rows:
-        gemma = _fmt(m.get(key)) if model_measured else "not measured"
-        out.append(f"| {label} | {_fmt(b.get(key))} | {gemma} |")
+        model_value = _fmt(m.get(key)) if model_measured else "not measured"
+        out.append(f"| {label} | {_fmt(b.get(key))} | {model_value} |")
     out.append("")
 
     # --- Verification -----------------------------------------------------

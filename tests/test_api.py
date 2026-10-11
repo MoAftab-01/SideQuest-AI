@@ -27,7 +27,6 @@ import pytest
 # exists. Point it at a path that cannot exist so this module imports the same
 # way whether or not a built front end is present, and never mounts `web/`.
 os.environ["SIDEQUEST_WEB_DIR"] = str(Path(__file__).parent / "__no_web_here__")
-os.environ.pop("SIDEQUEST_EAGER_LOAD", None)
 
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -167,8 +166,8 @@ def client(monkeypatch):
     def _make(engine: InferenceEngine | None) -> TestClient:
         installed = engine if engine is not None else UnavailableEngine("no engine registered")
         monkeypatch.setattr(api, "_engine", installed)
-        # Any route that reaches build_engine() would try to import transformers
-        # and look for weights. Failing loudly proves it is never called.
+        # Any route that reaches build_engine() could contact OpenRouter.
+        # Failing loudly proves it is never called in this test.
         monkeypatch.setattr(
             api,
             "build_engine",
@@ -787,7 +786,6 @@ def test_app_imports_when_web_dir_has_no_assets_subdir(tmp_path):
 
     env = dict(os.environ)
     env["SIDEQUEST_WEB_DIR"] = str(web_dir)
-    env.pop("SIDEQUEST_EAGER_LOAD", None)
     env["PYTHONPATH"] = str(backend_dir)
 
     # Subprocess: app.main is already imported in this process and its module
@@ -818,19 +816,14 @@ def test_app_serves_a_full_mission_with_the_network_forcibly_disabled(tmp_path):
     The distinction this pins is narrower than it might look, and worth stating
     precisely, because it is easy to overclaim here:
 
-      * CLAIMED AND TESTED (this test): with no network and no weights, the app
+      * CLAIMED AND TESTED (this test): with no network and no provider key, the app
         still generates a complete, safety-checked mission and says out loud
         that it fell back.
-      * NOT CLAIMED: that the *model* path works offline. Weights are fetched
-        from HuggingFace once; end-to-end offline inference with weights present
-        has not been verified here.
+      * NOT CLAIMED: that OpenRouter inference works offline.
 
-    ``HF_HUB_OFFLINE``/``TRANSFORMERS_OFFLINE`` make transformers raise locally
-    instead of dialling out, which is the realistic offline failure -- the load
-    attempt cannot reach the hub and the files are not cached. The app is
-    required to catch that, fall back, and keep serving. The environment is set
-    in a subprocess because ``app.main`` is already imported in this process and
-    the module cache would ignore it.
+    With no OpenRouter API key, the app must not make a provider request and
+    must keep serving its deterministic fallback. The environment is set in a
+    subprocess because ``app.main`` is already imported in this process.
     """
     import subprocess
     import sys
@@ -847,7 +840,7 @@ client = TestClient(fastapi_app)
 out = {{}}
 
 health = client.get("/api/health").json()
-out["loaded"] = health["engine"]["loaded"]
+out["provider_configured"] = health["provider_configured"]
 
 resp = client.post(
     "/api/quest?player_id=offline-probe",
@@ -872,11 +865,7 @@ print("RESULT:" + json.dumps(out))
     env = dict(os.environ)
     env["SIDEQUEST_WEB_DIR"] = str(tmp_path / "no_web")
     env["SIDEQUEST_DATA_DIR"] = str(tmp_path / "data")
-    env["HF_HUB_OFFLINE"] = "1"
-    env["TRANSFORMERS_OFFLINE"] = "1"
-    env["NO_PROXY"] = "*"
-    env.pop("HF_TOKEN", None)
-    env.pop("SIDEQUEST_EAGER_LOAD", None)
+    env.pop("OPENROUTER_API_KEY", None)
     env["PYTHONPATH"] = str(backend_dir)
 
     proc = subprocess.run(
@@ -900,9 +889,7 @@ print("RESULT:" + json.dumps(out))
     assert payload is not None, context
 
     assert payload["status"] == 200, context
-    # No weights loadable with the hub unreachable, so the engine must report
-    # honestly that nothing is loaded rather than implying one is standing by.
-    assert payload["loaded"] is False, context
+    assert payload["provider_configured"] is False, context
     assert payload["source"] == "fallback", context
     assert payload["title"].strip(), context
     assert payload["steps"] > 0, context

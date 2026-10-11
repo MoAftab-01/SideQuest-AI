@@ -34,10 +34,8 @@ def _fmt(value: object) -> str:
 def _one_line(value: object, limit: int = 200) -> str:
     """Collapse a reason string onto a single line.
 
-    The load errors that reach this report are multi-line -- HuggingFace returns
-    a 401 block spanning several lines. Embedded newlines break the markdown
-    blockquote on line 5 of RESULTS.md and close an inline code span early, so
-    the reason is collapsed before it is quoted anywhere.
+    Provider and parsing errors can be multi-line. Embedded newlines break the
+    markdown blockquote in RESULTS.md, so reasons are collapsed before quoting.
     """
     text = " ".join(str(value or "unknown").split())
     if len(text) > limit:
@@ -51,12 +49,10 @@ def print_summary(results: dict) -> None:
     print("=" * 68)
 
     env = results.get("environment", {})
-    probe = env.get("probe", {})
     print(f"\nEnvironment")
     print(f"  python         {env.get('python')}")
-    print(f"  torch          {env.get('torch')}  (cuda={probe.get('cuda')})")
-    print(f"  gpu            {probe.get('gpu_name')}")
-    print(f"  transformers   {env.get('transformers')}")
+    print(f"  platform       {env.get('platform')}")
+    print(f"  processor      {env.get('processor')}")
     print(f"  ram            {env.get('ram_gb')} GB")
     print(f"  cores          {env.get('logical_cores')}")
 
@@ -145,14 +141,14 @@ def to_markdown(results: dict) -> str:
         "## Measured results",
         "",
         f"_Generated {results.get('generated_at_iso')} on "
-        f"{env.get('probe', {}).get('gpu_name', 'CPU')}, "
-        f"torch {env.get('torch')}, transformers {env.get('transformers')}._",
+        f"{env.get('processor') or env.get('platform') or 'unknown hardware'}, "
+        f"Python {env.get('python')}._",
         "",
     ]
 
     if not m.get("measured"):
         lines += [
-            "> The open-weight model was **not available** in this environment "
+            "> The OpenRouter model was **not available** in this environment "
             f"when these results were generated: "
             f"`{_one_line(m.get('unavailable_reason'))}`",
             ">",
@@ -162,7 +158,7 @@ def to_markdown(results: dict) -> str:
         ]
 
     lines += [
-        "| Metric | Deterministic baseline | Gemma (if available) |",
+        "| Metric | Deterministic baseline | OpenRouter model (if available) |",
         "| --- | --- | --- |",
     ]
     rows = [

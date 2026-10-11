@@ -13,7 +13,7 @@
 
 'use strict';
 
-var VERSION = 'sidequest-v1';
+var VERSION = 'sidequest-v2';
 var SHELL = [
   './',
   './index.html',

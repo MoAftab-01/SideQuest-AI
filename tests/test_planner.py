@@ -23,7 +23,7 @@ The headline rule, per the docstring on ``plan_with_retry``:
     signal that we should fall back, not a formatting problem to re-prompt.
 
 Engines here are hand-built fakes returning canned ``GenerateResult`` objects.
-Nothing imports torch or transformers, no weights are loaded, and no test
+No external provider is called, no weights are loaded, and no test
 touches the network, so the whole file runs in well under a second.
 """
 

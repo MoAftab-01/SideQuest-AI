@@ -1,7 +1,7 @@
 [project]
 name = "sidequest-ai"
 version = "0.1.0"
-description = "A screen-minimal outdoor exploration game powered by local open-weight inference."
+description = "A screen-minimal outdoor exploration game powered by OpenRouter."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -10,14 +10,8 @@ dependencies = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.29",
     "pydantic>=2.6",
-    "python-multipart>=0.0.9",
     "pillow>=10.0",
-    "numpy>=1.26",
-    "transformers==4.57.1",
-    "torch>=2.4",
-    "accelerate>=0.30",
-    "safetensors>=0.4",
-    "sentencepiece>=0.2",
+    "python-dotenv>=1.0",
 ]
 
 [project.optional-dependencies]
@@ -36,7 +30,4 @@ include = ["app*"]
 testpaths = ["tests"]
 pythonpath = ["backend"]
 addopts = "-q --strict-markers"
-markers = [
-    "model: tests that require real open-weight model weights (deselected by default via -m 'not model')",
-    "slow: long-running tests",
-]
+markers = ["slow: long-running tests"]

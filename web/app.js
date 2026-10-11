@@ -62,7 +62,7 @@
   })();
 
   var TIMEOUT_SHORT = 20000;   // state / health
-  var TIMEOUT_LONG  = 60000;   // quest + verify: a model may be thinking
+  var TIMEOUT_LONG  = 80000;   // includes the first OpenRouter connectivity check
 
   /** An error that carries a message a player can actually read. */
   function ApiError(message, status, detail) {
@@ -257,7 +257,7 @@
       out.push(makeBadge({
         variant: 'gen-cached',
         label: 'JUDGED BY: ' + String(v.model_id).toUpperCase(),
-        why: 'The open-weight model named above produced this judgement locally.'
+        why: 'The OpenRouter model named above produced this judgement.'
       }));
     }
     return out;
@@ -299,7 +299,7 @@
       variant: 'gen-fallback',
       label: 'GENERATED WITHOUT THE AI MODEL',
       why: why,
-      tip: reason ? 'Reason: ' + reason.slice(0, 220) : 'No model weights were loaded.'
+      tip: reason ? 'Reason: ' + reason.slice(0, 220) : 'OpenRouter is not configured.'
     });
   }
 
@@ -310,9 +310,11 @@
   var SCREENS = ['setup', 'mission', 'away', 'return', 'verdict', 'summary'];
   var current = 'setup';
 
-  function show(name) {
+  function show(name, fromHistory) {
     if (SCREENS.indexOf(name) === -1) name = 'setup';
+    var changed = name !== current;
     current = name;
+    if (changed && !fromHistory) location.hash = name;
     SCREENS.forEach(function (s) {
       var node = $('screen-' + s);
       if (node) node.hidden = (s !== name);
@@ -357,7 +359,7 @@
         return ['You are offline', 'SideQuest needs the local server to generate and check missions. Reconnect and try again.'];
       }
       if (err.status === 0 && err.detail === 'timeout') {
-        return ['That took too long', 'The server did not answer in time. It may still be loading model weights — try again in a moment.'];
+        return ['That took too long', 'The server did not answer in time. Try again in a moment.'];
       }
       if (err.status === 0) {
         return ['Cannot reach the server', 'Start the backend (uvicorn app.main:app) and try again.'];
@@ -1102,21 +1104,24 @@
 
     if (eng && eng.loaded === true) {
       item('Model', eng.model_id || 'unknown');
-      item('Running on', eng.device + ' · ' + eng.dtype);
+      item('Running on', 'OpenRouter API');
       item('Vision (photo checking)', eng.supports_vision
         ? 'available' : 'NOT available — photos cannot be judged by a model');
     } else {
-      item('Model', 'none loaded');
+      item('Model', 'OpenRouter not connected');
       item('Vision (photo checking)',
         'unavailable — photos cannot be judged by a model, so nothing can be AI verified');
       item('Why',
-        (eng && eng.load_error) ? String(eng.load_error).slice(0, 240) : 'Model weights are not installed.');
+        (eng && eng.load_error) ? String(eng.load_error).slice(0, 240) : 'OpenRouter is not configured or reachable.');
     }
 
-    item('Where inference runs', 'On this machine. Nothing is sent anywhere else.');
-    item('What leaves the machine',
-      'Only the photo you attach, and only when you press “Submit for checking”. ' +
-      'There is no analytics, no telemetry and no third-party request.');
+    item('Where inference runs', eng && eng.loaded
+      ? 'OpenRouter, using the configured model.'
+      : 'No AI provider is connected; the built-in deterministic fallback is used.');
+    item('What leaves this device',
+      'When OpenRouter is configured, mission details are sent when you generate a mission. ' +
+      'An attached photo is sent for analysis only when you press “Submit for checking”. ' +
+      'There is no analytics or telemetry.');
     item('Your location',
       'Never requested and never stored. “Roughly where?” is a free-text label you type yourself.');
 
@@ -1250,13 +1255,14 @@
       var h = location.hash.replace('#', '').trim();
       if (!h) {
         // Load on / always shows setup so users are never stuck on another screen
-        if (current !== 'setup') show('setup');
+        if (current !== 'setup') show('setup', true);
+        else location.replace('#setup');
         return;
       }
       // Only navigate to a known screen when the hash matches; do not jump
       // unexpectedly if the user is already mid-flow.
       if (SCREENS.indexOf(h) !== -1 && h !== current) {
-        try { show(h); } catch (e) { /* ignore */ }
+        show(h, true);
       }
     }
     window.addEventListener('popstate', syncScreenFromHash);
@@ -1358,10 +1364,11 @@
       var note = $('gen-note');
       var eng = state.health && state.health.engine;
       if (eng && eng.loaded === false) {
-        note.textContent = 'No model is loaded, so missions will come from the built-in ' +
-          'template library and photos cannot be AI verified. The app will say so on every result.';
+        note.textContent = 'OpenRouter is unavailable, so missions use the built-in ' +
+          'template library and photos cannot be AI verified. The app labels every result.';
       } else if (eng && eng.loaded === true) {
-        note.textContent = 'Model: ' + (eng.model_id || 'unknown') + '. Everything runs on this machine.';
+        note.textContent = 'Model: ' + (eng.model_id || 'unknown') +
+          ' via OpenRouter. Mission details and submitted photos are sent to its API.';
       }
     });
   }

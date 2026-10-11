@@ -1,13 +1,6 @@
 # SideQuest AI -- container image.
 #
-# Deliberately CPU-only. A 4B vision model needs a GPU to be interactive, and
-# Render's free tier has none, so this image ships the application and its
-# deterministic fallback. Set HF_TOKEN on the service and it will pull Gemma and
-# run it on CPU: correct, but slow, and the UI will show the real latency rather
-# than pretending otherwise.
-#
-# The torch install is CPU-only on purpose -- the CUDA wheels add several GB and
-# would not be used here.
+# OpenRouter hosts model inference, so this image needs no local model weights.
 
 FROM python:3.11-slim
 
@@ -25,15 +18,10 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Build tools are needed only for wheels with no manylinux build; keeping them in
-# a separate layer keeps them out of the final image.
+# curl is used by the container health check.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends build-essential curl \
+ && apt-get install -y --no-install-recommends curl \
  && rm -rf /var/lib/apt/lists/*
-
-# Torch first, CPU index explicitly. Without this the default index pulls the
-# CUDA build and the image balloons past 5 GB for no benefit on this host.
-RUN pip install --index-url https://download.pytorch.org/whl/cpu torch>=2.4
 
 COPY pyproject.toml ./
 COPY backend ./backend
@@ -42,7 +30,7 @@ COPY eval ./eval
 COPY scripts ./scripts
 
 RUN pip install --no-deps -e . \
- && pip install fastapi "uvicorn[standard]" pydantic python-multipart pillow numpy "transformers==4.57.1" accelerate safetensors sentencepiece
+ && pip install fastapi "uvicorn[standard]" pydantic pillow
 
 # Player progress is written here. On Render this is an ephemeral filesystem:
 # progress persists for the life of the instance and is lost on redeploy.

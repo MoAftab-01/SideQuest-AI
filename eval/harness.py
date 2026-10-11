@@ -498,7 +498,7 @@ class _UnavailableAsBaseline:
     """Adapter that forces the planning path to use the deterministic engine.
 
     Passing an `UnavailableEngine` measures the baseline honestly: the planner
-    takes exactly the same code path a user gets with no model installed.
+    takes exactly the same code path a user gets without OpenRouter configured.
     """
 
     def __init__(self, inner: InferenceEngine) -> None:
@@ -525,29 +525,16 @@ class _UnavailableAsBaseline:
 
 
 def _environment(engine: InferenceEngine) -> dict[str, Any]:
-    """Capture the machine and library versions the numbers were produced on.
+    """Capture the runtime and machine that produced the evaluation numbers."""
+    import os
+    import platform
 
-    Without this a latency number is meaningless -- it is a property of the
-    hardware as much as the model.
-
-    Versions are read from the installed distributions rather than from
-    `engine.status()`: when no model loaded the engine is an UnavailableEngine
-    that legitimately reports None for both, which would make the report claim
-    the libraries were missing when they are installed and working.
-    """
-    from app.ai.gemma_engine import probe_device
-
-    info: dict[str, Any] = {"probe": probe_device()}
-    info["torch"] = _dist_version("torch")
-    info["transformers"] = _dist_version("transformers")
-    info["python"] = _python_version()
-
-    try:
-        import os
-
-        info["logical_cores"] = os.cpu_count()
-    except Exception:
-        pass
+    info: dict[str, Any] = {
+        "python": _python_version(),
+        "platform": platform.platform(),
+        "processor": platform.processor() or None,
+        "logical_cores": os.cpu_count(),
+    }
 
     try:
         import psutil
@@ -557,16 +544,6 @@ def _environment(engine: InferenceEngine) -> dict[str, Any]:
         pass
 
     return info
-
-
-def _dist_version(name: str) -> str | None:
-    """Installed version of a distribution, or None if it is not installed."""
-    from importlib.metadata import PackageNotFoundError, version
-
-    try:
-        return version(name)
-    except PackageNotFoundError:
-        return None
 
 
 def _python_version() -> str:

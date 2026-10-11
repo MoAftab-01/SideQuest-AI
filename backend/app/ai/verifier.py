@@ -219,8 +219,8 @@ def verify_evidence(
     if not status.loaded:
         verdict = fallback_verdict(quest, evidence)
         verdict.summary = (
-            "No open-weight model is loaded, so this photo was not checked. "
-            "Start the app with model weights to enable verification."
+            "OpenRouter is unavailable, so this photo was not checked. "
+            "Configure a valid OPENROUTER_API_KEY to enable verification."
         )
         return verdict, VerifyOutcome(
             source=GeneratorSource.FALLBACK,
