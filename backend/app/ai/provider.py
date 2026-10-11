@@ -85,7 +85,6 @@ class ProviderEngine(InferenceEngine):
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_new_tokens,
-            "response_format": {"type": "json_object"},
         }
         started = time.perf_counter()
         try:
