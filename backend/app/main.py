@@ -85,12 +85,13 @@ app.add_middleware(
 def health() -> dict:
     """What is actually running. Never overstates capability.
     Does not initialize a heavyweight model just to report status."""
-    # Read env credentials directly; never trigger get_engine() here.
-    openrouter_key_present = bool(os.environ.get("OPENROUTER_API_KEY"))
-    model_configured = bool(
-        os.environ.get("OPENROUTER_MODEL_ID", "google/gemma-3-4b-it")
-    )
-    provider_available = openrouter_key_present
+    # Truthful: Groq takes priority if configured; OpenRouter kept for fallback
+    groq_key = bool(os.environ.get("GROQ_API_KEY"))
+    openrouter_key = bool(os.environ.get("OPENROUTER_API_KEY"))
+    openrouter_key_present = openrouter_key
+    provider_configured = groq_key or openrouter_key
+    provider_available = provider_configured
+    model_configured = bool(os.environ.get("GROQ_MODEL") or os.environ.get("OPENROUTER_MODEL_ID") or os.environ.get("SIDEQUEST_MODEL_ID") or os.environ.get("SIDEQUEST_FALLBACK_MODEL_ID"))
     # Only load a lightweight status check, never the full model engine.
     status_summary = {
         "status": "ok",
@@ -102,7 +103,7 @@ def health() -> dict:
         "model_successfully_generated": False,
         "vision_model_available": False,
         "model_is_local": False,
-        "note": "OpenRouter receives mission prompts and submitted photos when configured. Without a valid API key, the deterministic fallback is used.",
+        "note": "Groq configured when GROQ_API_KEY set (priority over OpenRouter); deterministic fallback preserved. Health never initializes engine.",
     }
     # If an engine was already built, reuse its honest status; never build new.
     installed = _engine

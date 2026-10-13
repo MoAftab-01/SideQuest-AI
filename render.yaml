@@ -26,9 +26,18 @@ services:
         value: /app/data
 
       # Secret. Set in the Render dashboard; never committed.
+      - key: GROQ_API_KEY
+        sync: false
+
+      # OpenRouter kept for fallback; Groq takes priority when GROQ_API_KEY present.
       - key: OPENROUTER_API_KEY
         sync: false
 
+      # Model selection. Default to Groq open-weight model; can override with GROQ_MODEL.
+      - key: GROQ_MODEL
+        value: llama-3.1-8b-instant
+
+      # Preserve existing OpenRouter settings for fallback path.
       - key: OPENROUTER_MODEL_ID
         value: google/gemma-3-4b-it
 

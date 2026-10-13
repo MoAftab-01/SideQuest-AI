@@ -5,6 +5,8 @@ from __future__ import annotations
 import abc
 import os
 
+import logging
+
 from app.models.schemas import EngineStatus, GenerateResult, GeneratorSource
 
 #: Hard ceiling on generation. Mission text is short; a runaway decode is a bug
@@ -95,10 +97,26 @@ class UnavailableEngine(InferenceEngine):
 
 
 def build_engine() -> InferenceEngine:
-    """Build OpenRouter when configured; otherwise use the honest fallback."""
+    """Build Groq when configured; else OpenRouter; else honest fallback."""
+    import logging
+    log = logging.getLogger(__name__)
+    from app.ai.groq import GroqEngine
     from app.ai.provider import ProviderEngine
-
+    # Priority 1: Groq (if GROQ_API_KEY set)
+    groq_key = os.environ.get("GROQ_API_KEY")
+    if groq_key:
+        groq = GroqEngine()
+        if groq.load():
+            return groq
+        log.info("Groq configured but load() False (%s); falling through", groq.last_error)
+    # Priority 2: OpenRouter
     provider = ProviderEngine()
     if provider.load():
         return provider
-    return UnavailableEngine(provider.last_error or "OpenRouter is unavailable")
+    # Priority 3: honest fallback
+    msg = ""
+    if groq_key and groq.last_error:
+        msg = f"Groq: {groq.last_error}; OpenRouter: {provider.last_error or 'unavailable'}"
+    else:
+        msg = provider.last_error or "OpenRouter unavailable"
+    return UnavailableEngine(msg)
